@@ -2,52 +2,81 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NexCall Pro | PWA</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NexCall Pro</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        .glass { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
-        #installBtn { display: none; } /* ආරම්භයේදී බටන් එක හංගන්න */
+        body { background-color: #0b0f19; overscroll-behavior: none; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .video-full { object-fit: cover; width: 100vw; height: 100vh; }
+        .self-view { 
+            position: absolute; top: 20px; right: 20px; 
+            width: 100px; height: 150px; border-radius: 12px;
+            border: 2px solid rgba(59, 130, 246, 0.5); overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 10;
+        }
+        .controls-panel {
+            position: fixed; bottom: 30px; left: 50%;
+            transform: translateX(-50%); z-index: 20;
+            width: 90%; max-width: 400px;
+        }
+        #installBtn { display: none; }
     </style>
 </head>
-<body class="bg-slate-900 text-white min-h-screen p-4 flex flex-col items-center">
+<body class="text-white overflow-hidden font-sans">
 
-    <button id="installBtn" class="mb-4 bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-full font-bold shadow-lg flex items-center gap-2 transition-all">
-        <i class="fas fa-download"></i> Install NexCall App
+    <button id="installBtn" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-blue-600 px-5 py-2 rounded-full text-sm font-bold shadow-2xl flex items-center gap-2 animate-bounce">
+        <i class="fas fa-plus-circle"></i> Install App
     </button>
 
-    <div class="text-center mb-6">
-        <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">NexCall Pro</h1>
+    <div class="relative w-screen h-screen">
+        <video id="remoteVideo" class="video-full bg-slate-900" autoplay playsinline></video>
+        
+        <div class="self-view">
+            <video id="localVideo" class="w-full h-full object-cover" autoplay muted playsinline></video>
+        </div>
+
+        <div id="waitingMsg" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 z-0">
+            <div class="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p class="text-slate-400">Ready for connection...</p>
+        </div>
     </div>
 
-    <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="relative rounded-xl overflow-hidden bg-slate-800 border-2 border-blue-500/30">
-            <video id="localVideo" class="w-full h-[250px] object-cover" autoplay muted></video>
-            <div class="absolute bottom-2 left-2 glass px-2 py-1 rounded text-xs text-blue-300">Local Stream</div>
+    <div class="controls-panel flex flex-col gap-4">
+        
+        <div class="glass p-4 rounded-3xl shadow-2xl">
+            <div class="flex items-center justify-between mb-3 px-1">
+                <span class="text-[10px] uppercase tracking-tighter text-slate-400">Your Shareable ID</span>
+                <button onclick="copyID()" class="text-blue-400 text-xs font-bold">COPY ID</button>
+            </div>
+            <div id="my-id" class="text-center font-mono text-lg py-1 bg-slate-800/50 rounded-xl text-emerald-400 border border-emerald-500/20">
+                Generating...
+            </div>
         </div>
-        <div class="relative rounded-xl overflow-hidden bg-slate-800 border-2 border-emerald-500/30">
-            <video id="remoteVideo" class="w-full h-[250px] object-cover" autoplay></video>
-            <div id="waitingMsg" class="absolute inset-0 flex items-center justify-center text-slate-500 text-sm italic">Connecting...</div>
-        </div>
-    </div>
 
-    <div class="mt-6 glass p-4 rounded-2xl w-full max-w-xl flex flex-col gap-4 shadow-xl">
-        <div class="flex items-center justify-between bg-slate-800 p-3 rounded-xl border border-slate-700">
-            <span class="text-xs text-slate-400 uppercase">Your ID:</span>
-            <code id="my-id" class="text-emerald-400 font-mono text-sm">Loading...</code>
-        </div>
-        
-        <input type="text" id="peer-id" placeholder="Enter Partner ID" class="bg-slate-800 border border-slate-700 p-3 rounded-xl focus:outline-none focus:border-blue-500 text-center text-sm">
-        
-        <div class="flex gap-2">
-            <button onclick="makeCall()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition">
-                <i class="fas fa-phone"></i> Call
-            </button>
-            <button onclick="toggleAudio()" id="audioBtn" class="w-12 h-12 rounded-xl bg-slate-700 flex items-center justify-center"><i class="fas fa-microphone"></i></button>
-            <button onclick="toggleVideo()" id="videoBtn" class="w-12 h-12 rounded-xl bg-slate-700 flex items-center justify-center"><i class="fas fa-video"></i></button>
+        <div class="glass p-5 rounded-[2.5rem] flex flex-col gap-4 shadow-2xl">
+            <div class="flex gap-2">
+                <input type="text" id="peer-id" placeholder="Paste Partner ID" 
+                       class="flex-1 bg-slate-800 border border-slate-700 px-4 py-3 rounded-2xl focus:outline-none focus:border-blue-500 text-sm">
+                <button onclick="makeCall()" class="bg-emerald-600 hover:bg-emerald-500 px-6 rounded-2xl font-bold transition">
+                    <i class="fas fa-phone-alt"></i>
+                </button>
+            </div>
+
+            <div class="flex justify-center gap-6 py-1">
+                <button id="audioBtn" onclick="toggleAudio()" class="w-12 h-12 rounded-full bg-slate-700/50 flex items-center justify-center text-xl transition">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <button id="endCallBtn" onclick="location.reload()" class="w-14 h-14 rounded-full bg-red-600 flex items-center justify-center text-xl shadow-lg">
+                    <i class="fas fa-phone-slash"></i>
+                </button>
+                <button id="videoBtn" onclick="toggleVideo()" class="w-12 h-12 rounded-full bg-slate-700/50 flex items-center justify-center text-xl transition">
+                    <i class="fas fa-video"></i>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -56,60 +85,73 @@
         let localStream;
         let deferredPrompt;
 
-        // --- PWA Installation Logic ---
-        const installBtn = document.getElementById('installBtn');
-
+        // PWA Installation Logic
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            installBtn.style.display = 'flex'; // ඇප් එක ඉන්ස්ටෝල් කරන්න පුළුවන් නම් බටන් එක පෙන්වන්න
+            document.getElementById('installBtn').style.display = 'flex';
         });
 
-        installBtn.addEventListener('click', async () => {
+        document.getElementById('installBtn').addEventListener('click', async () => {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') installBtn.style.display = 'none';
+                if (outcome === 'accepted') document.getElementById('installBtn').style.display = 'none';
                 deferredPrompt = null;
             }
         });
 
-        // Service Worker Registration
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js');
         }
 
-        // --- Video Call Logic ---
+        // Camera Access
         navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
             localStream = stream;
             document.getElementById('localVideo').srcObject = stream;
-        });
+        }).catch(err => alert("Please enable camera/mic: " + err));
 
+        // Peer Logic
         peer.on('open', id => document.getElementById('my-id').innerText = id);
+
         peer.on('call', call => {
             call.answer(localStream);
-            call.on('stream', st => {
-                document.getElementById('remoteVideo').srcObject = st;
-                document.getElementById('waitingMsg').classList.add('hidden');
-            });
+            handleStream(call);
         });
 
         function makeCall() {
             const id = document.getElementById('peer-id').value;
+            if(!id) return alert("Enter an ID");
             const call = peer.call(id, localStream);
+            handleStream(call);
+        }
+
+        function handleStream(call) {
             call.on('stream', st => {
                 document.getElementById('remoteVideo').srcObject = st;
-                document.getElementById('waitingMsg').classList.add('hidden');
+                document.getElementById('waitingMsg').style.display = 'none';
             });
         }
 
-        function toggleAudio() { 
-            const e = localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled;
-            document.getElementById('audioBtn').classList.toggle('bg-red-500', !e);
+        // Toggles
+        function toggleAudio() {
+            const track = localStream.getAudioTracks()[0];
+            track.enabled = !track.enabled;
+            document.getElementById('audioBtn').classList.toggle('bg-red-500', !track.enabled);
+            document.getElementById('audioBtn').innerHTML = track.enabled ? '<i class="fas fa-microphone"></i>' : '<i class="fas fa-microphone-slash"></i>';
         }
-        function toggleVideo() { 
-            const e = localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled;
-            document.getElementById('videoBtn').classList.toggle('bg-red-500', !e);
+
+        function toggleVideo() {
+            const track = localStream.getVideoTracks()[0];
+            track.enabled = !track.enabled;
+            document.getElementById('videoBtn').classList.toggle('bg-red-500', !track.enabled);
+            document.getElementById('videoBtn').innerHTML = track.enabled ? '<i class="fas fa-video"></i>' : '<i class="fas fa-video-slash"></i>';
+        }
+
+        function copyID() {
+            const id = document.getElementById('my-id').innerText;
+            navigator.clipboard.writeText(id);
+            alert("ID Copied to Clipboard!");
         }
     </script>
 </body>
