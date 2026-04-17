@@ -3,156 +3,186 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NexCall Pro</title>
+    <title>NexCall Pro | Secure Connect</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { background-color: #0b0f19; overscroll-behavior: none; }
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .video-full { object-fit: cover; width: 100vw; height: 100vh; }
+        body { background-color: #0b141a; overscroll-behavior: none; font-family: -apple-system, sans-serif; }
+        .remote-video-container { width: 100vw; height: 100vh; background: #111b21; position: relative; }
+        .video-full { object-fit: cover; width: 100%; height: 100%; }
         .self-view { 
             position: absolute; top: 20px; right: 20px; 
-            width: 100px; height: 150px; border-radius: 12px;
-            border: 2px solid rgba(59, 130, 246, 0.5); overflow: hidden;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 10;
+            width: 110px; height: 165px; border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.2); overflow: hidden;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4); z-index: 30;
         }
-        .controls-panel {
-            position: fixed; bottom: 30px; left: 50%;
-            transform: translateX(-50%); z-index: 20;
-            width: 90%; max-width: 400px;
+        .wa-bottom-panel {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.9) 30%);
+            padding: 40px 20px 30px; z-index: 40;
+            display: flex; flex-direction: column; align-items: center; gap: 20px;
+        }
+        .control-btn {
+            width: 55px; height: 55px; border-radius: 50%;
+            display: flex; items-center justify-center;
+            font-size: 20px; transition: all 0.2s;
+            background: rgba(42, 57, 66, 0.9); border: 1px solid rgba(255,255,255,0.1);
+        }
+        .btn-danger { background: #ea0038 !important; }
+        .btn-active { background: #fff !important; color: #000 !important; }
+        .id-badge {
+            background: rgba(30, 45, 54, 0.9); padding: 8px 16px;
+            border-radius: 20px; font-size: 13px; color: #00a884;
+            border: 1px solid rgba(0, 168, 132, 0.3);
         }
         #installBtn { display: none; }
+        .mirror { transform: scaleX(-1); }
     </style>
 </head>
-<body class="text-white overflow-hidden font-sans">
+<body class="text-white overflow-hidden">
 
-    <button id="installBtn" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-blue-600 px-5 py-2 rounded-full text-sm font-bold shadow-2xl flex items-center gap-2 animate-bounce">
-        <i class="fas fa-plus-circle"></i> Install App
+    <button id="installBtn" class="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-[#00a884] px-5 py-2 rounded-full text-sm font-bold shadow-lg flex items-center gap-2">
+        <i class="fas fa-plus"></i> Install NexCall
     </button>
 
-    <div class="relative w-screen h-screen">
-        <video id="remoteVideo" class="video-full bg-slate-900" autoplay playsinline></video>
-        
+    <div class="remote-video-container">
+        <video id="remoteVideo" class="video-full" autoplay playsinline></video>
         <div class="self-view">
-            <video id="localVideo" class="w-full h-full object-cover" autoplay muted playsinline></video>
+            <video id="localVideo" class="w-full h-full object-cover mirror" autoplay muted playsinline></video>
         </div>
-
-        <div id="waitingMsg" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 z-0">
-            <div class="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p class="text-slate-400">Ready for connection...</p>
+        <div id="statusOverlay" class="absolute inset-0 flex flex-col items-center pt-24 bg-slate-900/40 z-10">
+            <div class="w-20 h-20 bg-slate-700 rounded-full flex items-center justify-center text-3xl mb-4 border-2 border-slate-600">
+                <i class="fas fa-user"></i>
+            </div>
+            <h2 class="text-2xl font-semibold">NexCall Pro</h2>
+            <p class="text-slate-300 text-sm mt-1">Secure Video Calling</p>
         </div>
     </div>
 
-    <div class="controls-panel flex flex-col gap-4">
-        
-        <div class="glass p-4 rounded-3xl shadow-2xl">
-            <div class="flex items-center justify-between mb-3 px-1">
-                <span class="text-[10px] uppercase tracking-tighter text-slate-400">Your Shareable ID</span>
-                <button onclick="copyID()" class="text-blue-400 text-xs font-bold">COPY ID</button>
+    <div class="wa-bottom-panel">
+        <div class="w-full max-w-sm flex flex-col items-center gap-3">
+            <div class="flex items-center gap-2">
+                <span class="id-badge">Registered ID: <span id="my-id">...</span></span>
+                <button onclick="copyID()" class="text-[#00a884] text-xs font-bold uppercase">Copy</button>
             </div>
-            <div id="my-id" class="text-center font-mono text-lg py-1 bg-slate-800/50 rounded-xl text-emerald-400 border border-emerald-500/20">
-                Generating...
+            <div class="flex w-full gap-2 mt-2">
+                <input type="text" id="peer-id" placeholder="Enter Partner's 6 Digits" 
+                       class="flex-1 bg-[#2a3942] border-none px-4 py-3 rounded-xl focus:ring-1 focus:ring-[#00a884] text-sm outline-none text-white">
+                <button onclick="makeCall()" class="bg-[#00a884] px-5 rounded-xl font-bold">
+                    <i class="fas fa-video text-lg"></i>
+                </button>
             </div>
         </div>
-
-        <div class="glass p-5 rounded-[2.5rem] flex flex-col gap-4 shadow-2xl">
-            <div class="flex gap-2">
-                <input type="text" id="peer-id" placeholder="Paste Partner ID" 
-                       class="flex-1 bg-slate-800 border border-slate-700 px-4 py-3 rounded-2xl focus:outline-none focus:border-blue-500 text-sm">
-                <button onclick="makeCall()" class="bg-emerald-600 hover:bg-emerald-500 px-6 rounded-2xl font-bold transition">
-                    <i class="fas fa-phone-alt"></i>
-                </button>
-            </div>
-
-            <div class="flex justify-center gap-6 py-1">
-                <button id="audioBtn" onclick="toggleAudio()" class="w-12 h-12 rounded-full bg-slate-700/50 flex items-center justify-center text-xl transition">
-                    <i class="fas fa-microphone"></i>
-                </button>
-                <button id="endCallBtn" onclick="location.reload()" class="w-14 h-14 rounded-full bg-red-600 flex items-center justify-center text-xl shadow-lg">
-                    <i class="fas fa-phone-slash"></i>
-                </button>
-                <button id="videoBtn" onclick="toggleVideo()" class="w-12 h-12 rounded-full bg-slate-700/50 flex items-center justify-center text-xl transition">
-                    <i class="fas fa-video"></i>
-                </button>
-            </div>
+        <div class="flex items-center gap-6">
+            <button id="videoBtn" onclick="toggleVideo()" class="control-btn"><i class="fas fa-video"></i></button>
+            <button onclick="location.reload()" class="control-btn btn-danger text-2xl"><i class="fas fa-phone-slash"></i></button>
+            <button id="audioBtn" onclick="toggleAudio()" class="control-btn"><i class="fas fa-microphone"></i></button>
+        </div>
+        <div class="text-[10px] text-slate-500 flex items-center gap-1">
+            <i class="fas fa-lock text-[8px]"></i> End-to-end encrypted
         </div>
     </div>
 
     <script>
-        const peer = new Peer();
+        // 1. NIC Persistence
+        let nicDigits = localStorage.getItem('user_nic');
+        if (!nicDigits) {
+            nicDigits = prompt("Register: Enter the last 6 digits of your NIC:");
+            if (nicDigits && nicDigits.length === 6 && !isNaN(nicDigits)) {
+                localStorage.setItem('user_nic', nicDigits);
+            } else {
+                alert("Valid 6 digits required. Reloading...");
+                location.reload();
+            }
+        }
+
+        const customID = "NIC-" + nicDigits;
+        const peer = new Peer(customID);
         let localStream;
         let deferredPrompt;
 
-        // PWA Installation Logic
+        // Auto-Update Logic
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').then((reg) => {
+                reg.onupdatefound = () => {
+                    const installingWorker = reg.installing;
+                    installingWorker.onstatechange = () => {
+                        if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            alert("New version available! Updating...");
+                            window.location.reload();
+                        }
+                    };
+                };
+            });
+        }
+
+        // Peer Events
+        peer.on('open', id => document.getElementById('my-id').innerText = id);
+        peer.on('error', err => {
+            if (err.type === 'id-taken') {
+                alert("ID already in use on another device.");
+                localStorage.removeItem('user_nic');
+                location.reload();
+            }
+        });
+
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
+            localStream = stream;
+            document.getElementById('localVideo').srcObject = stream;
+        });
+
+        peer.on('call', call => {
+            call.answer(localStream);
+            setupStream(call);
+        });
+
+        function makeCall() {
+            let id = document.getElementById('peer-id').value;
+            if(!id) return alert("Enter ID");
+            if(!id.startsWith("NIC-")) id = "NIC-" + id;
+            setupStream(peer.call(id, localStream));
+        }
+
+        function setupStream(call) {
+            call.on('stream', st => {
+                document.getElementById('remoteVideo').srcObject = st;
+                document.getElementById('statusOverlay').classList.add('hidden');
+            });
+        }
+
+        function toggleAudio() {
+            const t = localStream.getAudioTracks()[0]; t.enabled = !t.enabled;
+            const b = document.getElementById('audioBtn');
+            b.classList.toggle('btn-active', !t.enabled);
+            b.innerHTML = t.enabled ? '<i class="fas fa-microphone"></i>' : '<i class="fas fa-microphone-slash"></i>';
+        }
+
+        function toggleVideo() {
+            const t = localStream.getVideoTracks()[0]; t.enabled = !t.enabled;
+            const b = document.getElementById('videoBtn');
+            b.classList.toggle('btn-active', !t.enabled);
+            b.innerHTML = t.enabled ? '<i class="fas fa-video"></i>' : '<i class="fas fa-video-slash"></i>';
+        }
+
+        function copyID() {
+            navigator.clipboard.writeText(document.getElementById('my-id').innerText);
+            alert("ID Copied!");
+        }
+
         window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
+            e.preventDefault(); deferredPrompt = e;
             document.getElementById('installBtn').style.display = 'flex';
         });
 
-        document.getElementById('installBtn').addEventListener('click', async () => {
+        document.getElementById('installBtn').onclick = async () => {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
                 if (outcome === 'accepted') document.getElementById('installBtn').style.display = 'none';
-                deferredPrompt = null;
             }
-        });
-
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
-        }
-
-        // Camera Access
-        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
-            localStream = stream;
-            document.getElementById('localVideo').srcObject = stream;
-        }).catch(err => alert("Please enable camera/mic: " + err));
-
-        // Peer Logic
-        peer.on('open', id => document.getElementById('my-id').innerText = id);
-
-        peer.on('call', call => {
-            call.answer(localStream);
-            handleStream(call);
-        });
-
-        function makeCall() {
-            const id = document.getElementById('peer-id').value;
-            if(!id) return alert("Enter an ID");
-            const call = peer.call(id, localStream);
-            handleStream(call);
-        }
-
-        function handleStream(call) {
-            call.on('stream', st => {
-                document.getElementById('remoteVideo').srcObject = st;
-                document.getElementById('waitingMsg').style.display = 'none';
-            });
-        }
-
-        // Toggles
-        function toggleAudio() {
-            const track = localStream.getAudioTracks()[0];
-            track.enabled = !track.enabled;
-            document.getElementById('audioBtn').classList.toggle('bg-red-500', !track.enabled);
-            document.getElementById('audioBtn').innerHTML = track.enabled ? '<i class="fas fa-microphone"></i>' : '<i class="fas fa-microphone-slash"></i>';
-        }
-
-        function toggleVideo() {
-            const track = localStream.getVideoTracks()[0];
-            track.enabled = !track.enabled;
-            document.getElementById('videoBtn').classList.toggle('bg-red-500', !track.enabled);
-            document.getElementById('videoBtn').innerHTML = track.enabled ? '<i class="fas fa-video"></i>' : '<i class="fas fa-video-slash"></i>';
-        }
-
-        function copyID() {
-            const id = document.getElementById('my-id').innerText;
-            navigator.clipboard.writeText(id);
-            alert("ID Copied to Clipboard!");
-        }
+        };
     </script>
 </body>
 </html>
