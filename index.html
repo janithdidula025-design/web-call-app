@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexCall Pro | PWA</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .glass { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+        #installBtn { display: none; } /* ආරම්භයේදී බටන් එක හංගන්න */
+    </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen p-4 flex flex-col items-center">
+
+    <button id="installBtn" class="mb-4 bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-full font-bold shadow-lg flex items-center gap-2 transition-all">
+        <i class="fas fa-download"></i> Install NexCall App
+    </button>
+
+    <div class="text-center mb-6">
+        <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">NexCall Pro</h1>
+    </div>
+
+    <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="relative rounded-xl overflow-hidden bg-slate-800 border-2 border-blue-500/30">
+            <video id="localVideo" class="w-full h-[250px] object-cover" autoplay muted></video>
+            <div class="absolute bottom-2 left-2 glass px-2 py-1 rounded text-xs text-blue-300">Local Stream</div>
+        </div>
+        <div class="relative rounded-xl overflow-hidden bg-slate-800 border-2 border-emerald-500/30">
+            <video id="remoteVideo" class="w-full h-[250px] object-cover" autoplay></video>
+            <div id="waitingMsg" class="absolute inset-0 flex items-center justify-center text-slate-500 text-sm italic">Connecting...</div>
+        </div>
+    </div>
+
+    <div class="mt-6 glass p-4 rounded-2xl w-full max-w-xl flex flex-col gap-4 shadow-xl">
+        <div class="flex items-center justify-between bg-slate-800 p-3 rounded-xl border border-slate-700">
+            <span class="text-xs text-slate-400 uppercase">Your ID:</span>
+            <code id="my-id" class="text-emerald-400 font-mono text-sm">Loading...</code>
+        </div>
+        
+        <input type="text" id="peer-id" placeholder="Enter Partner ID" class="bg-slate-800 border border-slate-700 p-3 rounded-xl focus:outline-none focus:border-blue-500 text-center text-sm">
+        
+        <div class="flex gap-2">
+            <button onclick="makeCall()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition">
+                <i class="fas fa-phone"></i> Call
+            </button>
+            <button onclick="toggleAudio()" id="audioBtn" class="w-12 h-12 rounded-xl bg-slate-700 flex items-center justify-center"><i class="fas fa-microphone"></i></button>
+            <button onclick="toggleVideo()" id="videoBtn" class="w-12 h-12 rounded-xl bg-slate-700 flex items-center justify-center"><i class="fas fa-video"></i></button>
+        </div>
+    </div>
+
+    <script>
+        const peer = new Peer();
+        let localStream;
+        let deferredPrompt;
+
+        // --- PWA Installation Logic ---
+        const installBtn = document.getElementById('installBtn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.style.display = 'flex'; // ඇප් එක ඉන්ස්ටෝල් කරන්න පුළුවන් නම් බටන් එක පෙන්වන්න
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') installBtn.style.display = 'none';
+                deferredPrompt = null;
+            }
+        });
+
+        // Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+
+        // --- Video Call Logic ---
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
+            localStream = stream;
+            document.getElementById('localVideo').srcObject = stream;
+        });
+
+        peer.on('open', id => document.getElementById('my-id').innerText = id);
+        peer.on('call', call => {
+            call.answer(localStream);
+            call.on('stream', st => {
+                document.getElementById('remoteVideo').srcObject = st;
+                document.getElementById('waitingMsg').classList.add('hidden');
+            });
+        });
+
+        function makeCall() {
+            const id = document.getElementById('peer-id').value;
+            const call = peer.call(id, localStream);
+            call.on('stream', st => {
+                document.getElementById('remoteVideo').srcObject = st;
+                document.getElementById('waitingMsg').classList.add('hidden');
+            });
+        }
+
+        function toggleAudio() { 
+            const e = localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled;
+            document.getElementById('audioBtn').classList.toggle('bg-red-500', !e);
+        }
+        function toggleVideo() { 
+            const e = localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled;
+            document.getElementById('videoBtn').classList.toggle('bg-red-500', !e);
+        }
+    </script>
+</body>
+</html>
