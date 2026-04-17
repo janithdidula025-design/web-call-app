@@ -153,6 +153,102 @@
             navigator.clipboard.writeText(id);
             alert("ID Copied to Clipboard!");
         }
+        // NIC ඉලක්කම් ලබා ගැනීම
+let nicDigits = prompt("Enter the last 6 digits of your National ID (NIC):");
+while (nicDigits && (nicDigits.length !== 6 || isNaN(nicDigits))) {
+    nicDigits = prompt("Invalid! Please enter exactly 6 digits:");
+}
+
+const customID = nicDigits ? "NIC-" + nicDigits : null;
+const peer = new Peer(customID);
+
+let localStream;
+let deferredPrompt;
+
+// PWA Install Logic
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const installBtn = document.getElementById('installBtn');
+    if(installBtn) installBtn.style.display = 'flex';
+});
+
+const installBtn = document.getElementById('installBtn');
+if(installBtn) {
+    installBtn.addEventListener('click', async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') installBtn.style.display = 'none';
+            deferredPrompt = null;
+        }
+    });
+}
+
+// Service Worker
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+}
+
+// Camera Logic
+navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
+    localStream = stream;
+    document.getElementById('localVideo').srcObject = stream;
+}).catch(err => alert("Camera access required."));
+
+// Peer Logic
+peer.on('open', id => {
+    const myIdDisplay = document.getElementById('my-id');
+    if(myIdDisplay) myIdDisplay.innerText = id;
+});
+
+peer.on('error', (err) => {
+    if (err.type === 'id-taken') {
+        alert("This ID is already in use.");
+        location.reload();
+    }
+});
+
+peer.on('call', call => {
+    call.answer(localStream);
+    handleStream(call);
+});
+
+function makeCall() {
+    let remoteId = document.getElementById('peer-id').value;
+    if(!remoteId) return alert("Enter Partner's ID");
+    if(!remoteId.startsWith("NIC-")) remoteId = "NIC-" + remoteId;
+    
+    const call = peer.call(remoteId, localStream);
+    handleStream(call);
+}
+
+function handleStream(call) {
+    call.on('stream', st => {
+        document.getElementById('remoteVideo').srcObject = st;
+        const waiting = document.getElementById('waitingMsg');
+        if(waiting) waiting.classList.add('hidden');
+    });
+}
+
+// Controls
+function toggleAudio() {
+    const track = localStream.getAudioTracks()[0];
+    track.enabled = !track.enabled;
+    document.getElementById('audioBtn').classList.toggle('bg-red-500', !track.enabled);
+}
+
+function toggleVideo() {
+    const track = localStream.getVideoTracks()[0];
+    track.enabled = !track.enabled;
+    document.getElementById('videoBtn').classList.toggle('bg-red-500', !track.enabled);
+}
+
+function copyID() {
+    const id = document.getElementById('my-id').innerText;
+    navigator.clipboard.writeText(id);
+    alert("ID Copied!");
+}
     </script>
 </body>
 </html>
