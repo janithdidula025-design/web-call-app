@@ -10,34 +10,55 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { --wa-teal: #00a884; --wa-dark: #0b141a; }
-        body { background-color: var(--wa-dark); overscroll-behavior: none; font-family: 'Segoe UI', sans-serif; }
-        .video-wrapper { height: 100dvh; width: 100vw; position: relative; overflow: hidden; background: #000; }
+        body { background-color: var(--wa-dark); overscroll-behavior: none; font-family: 'Segoe UI', sans-serif; height: 100dvh; }
+        
+        /* Video Layout */
+        .video-wrapper { height: 100%; width: 100%; position: relative; overflow: hidden; background: #000; }
         .remote-video { width: 100%; height: 100%; object-fit: cover; }
         .self-view { 
             position: absolute; top: 1rem; right: 1rem; 
             width: 100px; height: 150px; border-radius: 12px;
             border: 1px solid rgba(255,255,255,0.2); z-index: 50;
+            background: #202c33;
         }
+
+        /* Bottom Sheet Fix */
         .bottom-sheet {
             position: fixed; bottom: 0; left: 0; right: 0;
-            background: linear-gradient(to top, rgba(11,20,26,1) 40%, transparent);
-            padding: 2rem 1rem; z-index: 100;
+            background: linear-gradient(to top, rgba(11,20,26,1) 60%, transparent);
+            padding: 2.5rem 1rem; z-index: 100;
             display: flex; flex-direction: column; align-items: center; gap: 1.5rem;
             transition: transform 0.4s ease;
         }
-        .control-group { display: flex; gap: 1.5rem; }
+
+        /* Icon Centering Fix */
         .btn-circle {
-            width: 55px; height: 55px; border-radius: 50%;
-            display: flex; items-center justify-center; font-size: 1.2rem;
-            background: rgba(255, 255, 255, 0.1); color: white; transition: 0.2s;
+            width: 60px; height: 60px; border-radius: 50%;
+            display: flex; 
+            align-items: center; /* Vertical Center */
+            justify-content: center; /* Horizontal Center */
+            font-size: 1.4rem;
+            background: rgba(255, 255, 255, 0.1); 
+            color: white; 
+            transition: 0.2s;
+            border: none;
+            outline: none;
         }
+
         .btn-danger { background: #ff3b30 !important; }
         .btn-off { background: white !important; color: black !important; }
         .hidden-ui { transform: translateY(100%); opacity: 0; }
         .mirror { transform: scaleX(-1); }
+
+        /* Input Fix */
+        .peer-input {
+            background: #2a3942; border-radius: 12px; padding: 12px 16px;
+            outline: none; flex: 1; color: white; border: 1px solid transparent;
+        }
+        .peer-input:focus { border-color: var(--wa-teal); }
     </style>
 </head>
-<body class="text-white">
+<body class="text-white overflow-hidden">
 
     <div class="video-wrapper" onclick="toggleUIVisibility()">
         <video id="remoteVideo" class="remote-video" autoplay playsinline></video>
@@ -46,74 +67,97 @@
         </div>
 
         <div id="statusOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-[#0b141a] z-40">
+            <div class="w-16 h-16 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mb-4"></div>
             <h2 class="text-xl font-medium mb-1">NexCall Pro</h2>
-            <p id="statusText" class="text-teal-500 text-xs tracking-widest uppercase">Initializing Secure Line...</p>
+            <p id="statusText" class="text-teal-500 text-xs tracking-widest uppercase">Initializing Line...</p>
         </div>
     </div>
 
     <div id="uiOverlay" class="bottom-sheet">
-        <div class="flex flex-col items-center">
+        <div class="flex flex-col items-center gap-1">
             <span class="text-[10px] text-slate-400 uppercase tracking-widest">My Identity</span>
-            <div class="flex items-center gap-2">
-                <span id="my-id" class="text-teal-400 font-bold">NIC-XXXXXX</span>
-                <i class="far fa-copy text-xs cursor-pointer" onclick="copyID()"></i>
+            <div class="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-full border border-white/10">
+                <span id="my-id" class="text-teal-400 font-bold font-mono text-sm uppercase">NIC-XXXXXX</span>
+                <button onclick="copyID()" class="text-slate-400 hover:text-white transition">
+                    <i class="far fa-copy text-sm"></i>
+                </button>
             </div>
         </div>
 
         <div class="flex gap-2 w-full max-w-xs" id="callBox">
-            <input type="number" id="peer-id" placeholder="Partner's 6 Digits" class="flex-1 bg-[#2a3942] rounded-lg p-3 outline-none focus:ring-1 focus:ring-teal-500">
-            <button onclick="makeCall()" class="bg-teal-600 px-5 rounded-lg"><i class="fas fa-video"></i></button>
+            <input type="number" id="peer-id" placeholder="Partner's 6 Digits" class="peer-input">
+            <button onclick="makeCall()" class="bg-teal-600 w-14 h-14 rounded-xl flex items-center justify-center hover:bg-teal-500 transition">
+                <i class="fas fa-video text-lg"></i>
+            </button>
         </div>
 
-        <div class="control-group">
-            <button id="videoBtn" onclick="toggleVideo()" class="btn-circle"><i class="fas fa-video"></i></button>
-            <button onclick="endCall()" class="btn-circle btn-danger"><i class="fas fa-phone-slash"></i></button>
-            <button id="audioBtn" onclick="toggleAudio()" class="btn-circle"><i class="fas fa-microphone"></i></button>
+        <div class="flex items-center gap-6">
+            <button id="videoBtn" onclick="toggleVideo()" class="btn-circle">
+                <i class="fas fa-video"></i>
+            </button>
+            <button onclick="endCall()" class="btn-circle btn-danger">
+                <i class="fas fa-phone-slash"></i>
+            </button>
+            <button id="audioBtn" onclick="toggleAudio()" class="btn-circle">
+                <i class="fas fa-microphone"></i>
+            </button>
         </div>
+        
+        <p class="text-[10px] text-slate-500 opacity-60">
+            <i class="fas fa-shield-alt mr-1"></i> End-to-end encrypted
+        </p>
     </div>
 
     <script>
         let nicDigits = localStorage.getItem('user_nic');
         if (!nicDigits) {
-            nicDigits = prompt("System Registration: Enter last 6 digits of NIC:");
-            if (nicDigits?.length === 6) localStorage.setItem('user_nic', nicDigits);
-            else location.reload();
+            nicDigits = prompt("Register: Enter last 6 digits of your NIC:");
+            if (nicDigits?.length === 6 && !isNaN(nicDigits)) {
+                localStorage.setItem('user_nic', nicDigits);
+            } else {
+                alert("Invalid input. Please enter 6 digits.");
+                location.reload();
+            }
         }
 
         const peer = new Peer("NIC-" + nicDigits);
         let localStream;
         let currentCall;
 
-        // Notification Permission
-        if (Notification.permission !== 'granted') Notification.requestPermission();
+        // Notification Setup
+        if ("Notification" in window && Notification.permission !== 'granted') {
+            Notification.requestPermission();
+        }
 
         navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
             localStream = stream;
             document.getElementById('localVideo').srcObject = stream;
-            document.getElementById('statusText').innerText = "Online - Ready to Receive";
+            document.getElementById('statusText').innerText = "System Online";
+        }).catch(err => {
+            alert("Camera access is required for video calls.");
         });
 
         peer.on('open', id => document.getElementById('my-id').innerText = id);
 
-        // Incoming Call Logic
         peer.on('call', call => {
-            // Background notification
             if (document.hidden) {
-                new Notification("Incoming NexCall", {
-                    body: "Someone is calling your secure line...",
+                new Notification("Incoming Call", {
+                    body: "Tap to answer your secure video call.",
                     icon: "https://cdn-icons-png.flaticon.com/512/174/174879.png"
                 });
             }
             
-            if (confirm("Incoming Call! Answer?")) {
+            if (confirm("Incoming Video Call. Answer?")) {
                 call.answer(localStream);
                 setupStream(call);
             }
         });
 
         function makeCall() {
-            const id = "NIC-" + document.getElementById('peer-id').value;
-            setupStream(peer.call(id, localStream));
+            const peerId = document.getElementById('peer-id').value;
+            if(!peerId) return alert("Please enter Partner's ID");
+            const fullId = "NIC-" + peerId;
+            setupStream(peer.call(fullId, localStream));
         }
 
         function setupStream(call) {
@@ -122,17 +166,26 @@
                 document.getElementById('remoteVideo').srcObject = st;
                 document.getElementById('statusOverlay').style.display = 'none';
                 document.getElementById('callBox').classList.add('hidden');
+                // Auto-hide UI after 4 seconds
+                setTimeout(() => toggleUIVisibility(), 4000);
             });
+            call.on('close', () => location.reload());
         }
 
         function toggleAudio() {
-            const t = localStream.getAudioTracks()[0]; t.enabled = !t.enabled;
-            document.getElementById('audioBtn').classList.toggle('btn-off', !t.enabled);
+            const track = localStream.getAudioTracks()[0];
+            track.enabled = !track.enabled;
+            document.getElementById('audioBtn').classList.toggle('btn-off', !track.enabled);
+            document.getElementById('audioBtn').innerHTML = track.enabled ? 
+                '<i class="fas fa-microphone"></i>' : '<i class="fas fa-microphone-slash"></i>';
         }
 
         function toggleVideo() {
-            const t = localStream.getVideoTracks()[0]; t.enabled = !t.enabled;
-            document.getElementById('videoBtn').classList.toggle('btn-off', !t.enabled);
+            const track = localStream.getVideoTracks()[0];
+            track.enabled = !track.enabled;
+            document.getElementById('videoBtn').classList.toggle('btn-off', !track.enabled);
+            document.getElementById('videoBtn').innerHTML = track.enabled ? 
+                '<i class="fas fa-video"></i>' : '<i class="fas fa-video-slash"></i>';
         }
 
         function endCall() {
@@ -145,11 +198,11 @@
         }
 
         function copyID() {
-            navigator.clipboard.writeText(document.getElementById('my-id').innerText);
-            alert("ID Copied");
+            const idText = document.getElementById('my-id').innerText;
+            navigator.clipboard.writeText(idText);
+            alert("ID Copied: " + idText);
         }
 
-        // Service Worker for Background Tasks
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js');
         }
