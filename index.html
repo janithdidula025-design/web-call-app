@@ -3,97 +3,137 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NexCall Pro | Secure Connect</title>
+    <title>NexCall Pro | Official</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { background-color: #0b141a; overscroll-behavior: none; font-family: -apple-system, sans-serif; }
-        .remote-video-container { width: 100vw; height: 100vh; background: #111b21; position: relative; }
-        .video-full { object-fit: cover; width: 100%; height: 100%; }
+        :root { --wa-teal: #00a884; --wa-dark: #0b141a; --wa-bg: #111b21; }
+        body { background-color: var(--wa-dark); overscroll-behavior: none; font-family: 'Segoe UI', Roboto, sans-serif; }
+        
+        /* Video Layout */
+        .video-wrapper { height: 100dvh; width: 100vw; position: relative; overflow: hidden; background: #000; }
+        .remote-video { width: 100%; height: 100%; object-fit: cover; transition: all 0.5s ease; }
+        
         .self-view { 
-            position: absolute; top: 20px; right: 20px; 
-            width: 110px; height: 165px; border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.2); overflow: hidden;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.4); z-index: 30;
+            position: absolute; top: 1.5rem; right: 1rem; 
+            width: 120px; height: 180px; border-radius: 16px;
+            border: 1.5px solid rgba(255,255,255,0.15); overflow: hidden;
+            box-shadow: 0 12px 24px rgba(0,0,0,0.5); z-index: 50;
+            background: #202c33; transition: transform 0.3s ease;
         }
-        .wa-bottom-panel {
+
+        /* Bottom Sheet UI */
+        .bottom-sheet {
             position: fixed; bottom: 0; left: 0; right: 0;
-            background: linear-gradient(transparent, rgba(0,0,0,0.9) 30%);
-            padding: 40px 20px 30px; z-index: 40;
-            display: flex; flex-direction: column; align-items: center; gap: 20px;
+            background: linear-gradient(to top, rgba(11,20,26,1) 0%, rgba(11,20,26,0.9) 60%, transparent 100%);
+            padding: 2rem 1.5rem 2.5rem; z-index: 100;
+            display: flex; flex-direction: column; align-items: center; gap: 1.5rem;
         }
-        .control-btn {
-            width: 55px; height: 55px; border-radius: 50%;
-            display: flex; items-center justify-center;
-            font-size: 20px; transition: all 0.2s;
-            background: rgba(42, 57, 66, 0.9); border: 1px solid rgba(255,255,255,0.1);
+
+        .control-group { display: flex; align-items: center; gap: 1.25rem; }
+        
+        .btn-circle {
+            width: 60px; height: 60px; border-radius: 50%;
+            display: flex; items-center justify-center; font-size: 1.4rem;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255,255,255,0.05);
+            color: white;
         }
-        .btn-danger { background: #ea0038 !important; }
-        .btn-active { background: #fff !important; color: #000 !important; }
-        .id-badge {
-            background: rgba(30, 45, 54, 0.9); padding: 8px 16px;
-            border-radius: 20px; font-size: 13px; color: #00a884;
-            border: 1px solid rgba(0, 168, 132, 0.3);
+        
+        .btn-circle:active { transform: scale(0.9); }
+        .btn-danger { background: #ff3b30 !important; border: none !important; }
+        .btn-off { background: white !important; color: black !important; }
+
+        .id-card {
+            background: rgba(32, 44, 51, 0.95); padding: 10px 18px;
+            border-radius: 50px; border: 1px solid rgba(0, 168, 132, 0.3);
+            display: flex; align-items: center; gap: 10px;
         }
-        #installBtn { display: none; }
+
         .mirror { transform: scaleX(-1); }
+        .hidden-ui { opacity: 0; pointer-events: none; transition: 0.4s; }
+        
+        /* Input Styling */
+        .peer-input {
+            background: #2a3942; border: 1px solid transparent;
+            color: white; border-radius: 14px; padding: 12px 16px;
+            width: 100%; max-width: 280px; outline: none; transition: 0.3s;
+        }
+        .peer-input:focus { border-color: var(--wa-teal); background: #324047; }
     </style>
 </head>
-<body class="text-white overflow-hidden">
+<body class="text-white">
 
-    <button id="installBtn" class="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-[#00a884] px-5 py-2 rounded-full text-sm font-bold shadow-lg flex items-center gap-2">
-        <i class="fas fa-plus"></i> Install NexCall
-    </button>
-
-    <div class="remote-video-container">
-        <video id="remoteVideo" class="video-full" autoplay playsinline></video>
-        <div class="self-view">
+    <div class="video-wrapper" onclick="toggleUIVisibility()">
+        <video id="remoteVideo" class="remote-video" autoplay playsinline></video>
+        
+        <div class="self-view" id="selfViewBox">
             <video id="localVideo" class="w-full h-full object-cover mirror" autoplay muted playsinline></video>
         </div>
-        <div id="statusOverlay" class="absolute inset-0 flex flex-col items-center pt-24 bg-slate-900/40 z-10">
-            <div class="w-20 h-20 bg-slate-700 rounded-full flex items-center justify-center text-3xl mb-4 border-2 border-slate-600">
-                <i class="fas fa-user"></i>
+
+        <div id="statusOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-[#0b141a] z-40">
+            <div class="relative mb-6">
+                <div class="w-24 h-24 bg-[#202c33] rounded-full flex items-center justify-center text-4xl border-2 border-[#2a3942]">
+                    <i class="fas fa-user text-slate-500"></i>
+                </div>
+                <div class="absolute inset-0 rounded-full border-4 border-t-teal-500 animate-spin"></div>
             </div>
-            <h2 class="text-2xl font-semibold">NexCall Pro</h2>
-            <p class="text-slate-300 text-sm mt-1">Secure Video Calling</p>
+            <h2 class="text-xl font-medium mb-1">NexCall Pro</h2>
+            <p id="statusText" class="text-teal-500 text-sm font-light tracking-widest uppercase">Waiting for connection</p>
         </div>
     </div>
 
-    <div class="wa-bottom-panel">
-        <div class="w-full max-w-sm flex flex-col items-center gap-3">
-            <div class="flex items-center gap-2">
-                <span class="id-badge">Registered ID: <span id="my-id">...</span></span>
-                <button onclick="copyID()" class="text-[#00a884] text-xs font-bold uppercase">Copy</button>
+    <div id="uiOverlay" class="bottom-sheet">
+        
+        <div id="installBtn" class="hidden bg-teal-600 px-6 py-2 rounded-full text-sm font-bold shadow-xl flex items-center gap-2 mb-2 animate-bounce cursor-pointer">
+            <i class="fas fa-download"></i> Install App
+        </div>
+
+        <div class="id-card mb-2">
+            <div class="flex flex-col">
+                <span class="text-[9px] uppercase text-slate-400 tracking-widest">My Identity</span>
+                <span id="my-id" class="text-teal-400 font-mono font-bold">Connecting...</span>
             </div>
-            <div class="flex w-full gap-2 mt-2">
-                <input type="text" id="peer-id" placeholder="Enter Partner's 6 Digits" 
-                       class="flex-1 bg-[#2a3942] border-none px-4 py-3 rounded-xl focus:ring-1 focus:ring-[#00a884] text-sm outline-none text-white">
-                <button onclick="makeCall()" class="bg-[#00a884] px-5 rounded-xl font-bold">
-                    <i class="fas fa-video text-lg"></i>
-                </button>
-            </div>
+            <button onclick="copyID()" class="ml-2 w-8 h-8 rounded-full bg-teal-500/10 flex items-center justify-center text-teal-400">
+                <i class="far fa-copy"></i>
+            </button>
         </div>
-        <div class="flex items-center gap-6">
-            <button id="videoBtn" onclick="toggleVideo()" class="control-btn"><i class="fas fa-video"></i></button>
-            <button onclick="location.reload()" class="control-btn btn-danger text-2xl"><i class="fas fa-phone-slash"></i></button>
-            <button id="audioBtn" onclick="toggleAudio()" class="control-btn"><i class="fas fa-microphone"></i></button>
+
+        <div class="flex gap-2 w-full justify-center" id="callControls">
+            <input type="number" id="peer-id" placeholder="Partner's 6 Digits" class="peer-input">
+            <button onclick="makeCall()" class="bg-teal-600 w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg hover:bg-teal-500 transition">
+                <i class="fas fa-video"></i>
+            </button>
         </div>
-        <div class="text-[10px] text-slate-500 flex items-center gap-1">
-            <i class="fas fa-lock text-[8px]"></i> End-to-end encrypted
+
+        <div class="control-group">
+            <button id="videoBtn" onclick="toggleVideo()" class="btn-circle">
+                <i class="fas fa-video"></i>
+            </button>
+            <button onclick="location.reload()" class="btn-circle btn-danger">
+                <i class="fas fa-phone-slash"></i>
+            </button>
+            <button id="audioBtn" onclick="toggleAudio()" class="btn-circle">
+                <i class="fas fa-microphone"></i>
+            </button>
         </div>
+
+        <p class="text-[10px] text-slate-500 opacity-60">
+            <i class="fas fa-shield-alt mr-1"></i> Official ADM Education Secure Line
+        </p>
     </div>
 
     <script>
-        // 1. NIC Persistence
+        // Persistence Logic
         let nicDigits = localStorage.getItem('user_nic');
         if (!nicDigits) {
-            nicDigits = prompt("Register: Enter the last 6 digits of your NIC:");
+            nicDigits = prompt("System Registration:\nEnter last 6 digits of your National ID:");
             if (nicDigits && nicDigits.length === 6 && !isNaN(nicDigits)) {
                 localStorage.setItem('user_nic', nicDigits);
             } else {
-                alert("Valid 6 digits required. Reloading...");
+                alert("Authentication failed. 6 digits required.");
                 location.reload();
             }
         }
@@ -101,86 +141,106 @@
         const customID = "NIC-" + nicDigits;
         const peer = new Peer(customID);
         let localStream;
-        let deferredPrompt;
+        let uiHidden = false;
 
-        // Auto-Update Logic
+        // Auto Update & SW
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').then((reg) => {
+            navigator.serviceWorker.register('sw.js').then(reg => {
                 reg.onupdatefound = () => {
-                    const installingWorker = reg.installing;
-                    installingWorker.onstatechange = () => {
-                        if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            alert("New version available! Updating...");
-                            window.location.reload();
+                    const worker = reg.installing;
+                    worker.onstatechange = () => {
+                        if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+                            alert("System Updated Successfully!");
+                            location.reload();
                         }
                     };
                 };
             });
         }
 
-        // Peer Events
+        // Camera Initialization
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
+            localStream = stream;
+            document.getElementById('localVideo').srcObject = stream;
+        }).catch(e => alert("Hardware Error: Camera/Mic access denied."));
+
+        // Peer Handlers
         peer.on('open', id => document.getElementById('my-id').innerText = id);
+        
         peer.on('error', err => {
             if (err.type === 'id-taken') {
-                alert("ID already in use on another device.");
+                alert("Critical: This ID is active on another device.");
                 localStorage.removeItem('user_nic');
                 location.reload();
             }
         });
 
-        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
-            localStream = stream;
-            document.getElementById('localVideo').srcObject = stream;
-        });
-
         peer.on('call', call => {
             call.answer(localStream);
-            setupStream(call);
+            setupCall(call);
         });
 
         function makeCall() {
             let id = document.getElementById('peer-id').value;
-            if(!id) return alert("Enter ID");
+            if(!id) return;
             if(!id.startsWith("NIC-")) id = "NIC-" + id;
-            setupStream(peer.call(id, localStream));
+            setupCall(peer.call(id, localStream));
         }
 
-        function setupStream(call) {
+        function setupCall(call) {
+            document.getElementById('statusText').innerText = "Connecting Line...";
             call.on('stream', st => {
                 document.getElementById('remoteVideo').srcObject = st;
-                document.getElementById('statusOverlay').classList.add('hidden');
+                document.getElementById('statusOverlay').style.display = 'none';
+                document.getElementById('callControls').classList.add('hidden');
+                autoHideUI();
             });
+        }
+
+        // UI Interactions
+        function toggleUIVisibility() {
+            const ui = document.getElementById('uiOverlay');
+            const selfView = document.getElementById('selfViewBox');
+            uiHidden = !uiHidden;
+            ui.classList.toggle('hidden-ui', uiHidden);
+            selfView.style.transform = uiHidden ? 'translateY(0)' : 'translateY(0)';
+        }
+
+        function autoHideUI() {
+            setTimeout(() => { if(!uiHidden) toggleUIVisibility(); }, 5000);
         }
 
         function toggleAudio() {
             const t = localStream.getAudioTracks()[0]; t.enabled = !t.enabled;
             const b = document.getElementById('audioBtn');
-            b.classList.toggle('btn-active', !t.enabled);
+            b.classList.toggle('btn-off', !t.enabled);
             b.innerHTML = t.enabled ? '<i class="fas fa-microphone"></i>' : '<i class="fas fa-microphone-slash"></i>';
         }
 
         function toggleVideo() {
             const t = localStream.getVideoTracks()[0]; t.enabled = !t.enabled;
             const b = document.getElementById('videoBtn');
-            b.classList.toggle('btn-active', !t.enabled);
+            b.classList.toggle('btn-off', !t.enabled);
             b.innerHTML = t.enabled ? '<i class="fas fa-video"></i>' : '<i class="fas fa-video-slash"></i>';
         }
 
         function copyID() {
             navigator.clipboard.writeText(document.getElementById('my-id').innerText);
-            alert("ID Copied!");
+            alert("Identity Copied!");
         }
 
-        window.addEventListener('beforeinstallprompt', (e) => {
+        // PWA Install
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', e => {
             e.preventDefault(); deferredPrompt = e;
-            document.getElementById('installBtn').style.display = 'flex';
+            document.getElementById('installBtn').classList.remove('hidden');
         });
 
         document.getElementById('installBtn').onclick = async () => {
-            if (deferredPrompt) {
+            if(deferredPrompt) {
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') document.getElementById('installBtn').style.display = 'none';
+                if(outcome === 'accepted') document.getElementById('installBtn').classList.add('hidden');
             }
         };
     </script>
