@@ -27,3 +27,27 @@ self.addEventListener('fetch', (event) => {
         caches.match(event.request).then((res) => res || fetch(event.request))
     );
 });
+self.addEventListener('install', (event) => {
+    self.skipWaiting();
+});
+
+self.addEventListener('push', (event) => {
+    const data = event.data ? event.data.text() : 'Incoming Secure Call';
+    event.waitUntil(
+        self.registration.showNotification('NexCall Pro', {
+            body: data,
+            icon: 'https://cdn-icons-png.flaticon.com/512/174/174879.png',
+            vibrate: [200, 100, 200],
+            tag: 'call-notification',
+            renotify: true
+        })
+    );
+});
+
+// යූසර් Notification එක ක්ලික් කළොත් ඇප් එක ඕපන් කිරීම
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    event.waitUntil(
+        clients.openWindow('/')
+    );
+});
