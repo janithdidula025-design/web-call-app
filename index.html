@@ -3,230 +3,235 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NexCall Pro | Premium Edition</title>
-    <link rel="manifest" href="manifest.json">
+    <title>NexCall </title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { --wa-teal: #00a884; --wa-dark: #0b141a; --wa-bg: #111b21; }
-        body { background-color: var(--wa-dark); color: white; font-family: 'Segoe UI', Roboto, Helvetica, sans-serif; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
+        body { background-color: var(--wa-dark); color: white; font-family: 'Segoe UI', Roboto, sans-serif; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
         
-        /* Video & Layout Management */
-        .app-content { flex: 1; position: relative; overflow: hidden; }
-        .video-wrapper { height: 100%; width: 100%; position: relative; background: #000; display: flex; align-items: center; justify-content: center; }
-        .remote-video { width: 100%; height: 100%; object-fit: cover; }
+        /* Video Grid Management */
+        #videoGrid { 
+            flex: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
+            gap: 8px; padding: 8px; background: #000; align-content: center; overflow-y: auto;
+        }
+        .video-box { position: relative; width: 100%; aspect-ratio: 3/4; border-radius: 12px; overflow: hidden; background: #202c33; border: 1px solid rgba(255,255,255,0.1); }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        
         .self-view { 
-            position: absolute; top: 1.5rem; right: 1rem; width: 110px; height: 160px; 
-            border-radius: 12px; border: 1.5px solid rgba(255,255,255,0.15); z-index: 50; 
-            overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5); 
+            position: absolute; bottom: 90px; right: 15px; width: 90px; height: 130px; 
+            border-radius: 12px; border: 2px solid var(--wa-teal); z-index: 100; overflow: hidden; box-shadow: 0 8px 20px rgba(0,0,0,0.5);
         }
 
-        /* Fixed Navigation Style */
+        /* Nav & Controls */
         .nav-bar { height: 75px; background: var(--wa-bg); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); }
-        .nav-item { display: flex; flex-direction: column; align-items: center; color: #8696a0; width: 25%; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #8696a0; width: 25%; cursor: pointer; }
         .nav-active { color: white; }
-        .nav-active .icon-bg { background: #005c4b; color: #dcf8c6; border-radius: 20px; padding: 4px 18px; }
-        .nav-text { font-size: 12px; margin-top: 5px; font-weight: 600; }
+        .nav-active i { background: #005c4b; color: #dcf8c6; border-radius: 20px; padding: 4px 18px; }
+        .nav-text { font-size: 11px; margin-top: 5px; font-weight: 600; }
 
-        /* Icon Centering Fix */
-        .btn-action { 
-            width: 55px; height: 55px; border-radius: 50%; display: flex; 
-            align-items: center; justify-content: center; font-size: 1.3rem; transition: 0.3s; 
-        }
-        .btn-call-start { background: var(--wa-teal); width: 60px; height: 60px; }
-
-        /* Overlays */
-        #incomingCallUI { position: fixed; inset: 0; background: #0b141a; z-index: 1000; display: none; flex-direction: column; align-items: center; padding-top: 15%; }
-        .caller-img { width: 120px; height: 120px; background: #202c33; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 4rem; color: #8696a0; margin-bottom: 2rem; border: 2px solid var(--wa-teal); }
+        .btn-round { width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; transition: 0.3s; background: rgba(255,255,255,0.1); }
+        .btn-danger { background: #ea0038 !important; }
         
-        /* Audio Mode UI */
-        .audio-only-bg { position: absolute; inset: 0; background: radial-gradient(circle, #202c33 0%, #0b141a 100%); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 45; }
+        /* Overlays */
+        #setupUI { position: fixed; inset: 0; background: #0b141a; z-index: 500; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-center; }
+        #incomingCallUI { position: fixed; inset: 0; background: #0b141a; z-index: 1000; display: none; flex-direction: column; align-items: center; padding-top: 20%; }
         
         .mirror { transform: scaleX(-1); }
-        .pulse-ring { animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(0, 168, 132, 0.4); } 70% { box-shadow: 0 0 0 20px rgba(0, 168, 132, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 168, 132, 0); } }
+        .member-tag { background: rgba(0, 168, 132, 0.2); color: var(--wa-teal); padding: 4px 12px; border-radius: 20px; font-size: 12px; border: 1px solid var(--wa-teal); }
     </style>
 </head>
 <body>
 
-    <main class="app-content">
-        <div class="video-wrapper">
-            <video id="remoteVideo" class="remote-video" autoplay playsinline></video>
+    <div id="videoGrid">
+        </div>
+
+    <div class="self-view" id="myView">
+        <video id="localVideo" class="mirror" autoplay muted playsinline></video>
+    </div>
+
+    <div id="activeControls" class="hidden fixed bottom-[85px] inset-x-0 flex justify-center gap-6 z-[110]">
+        <button onclick="toggleAudio()" id="audioBtn" class="btn-round"><i class="fas fa-microphone"></i></button>
+        <button onclick="location.reload()" class="btn-round btn-danger text-2xl shadow-xl"><i class="fas fa-phone-slash"></i></button>
+        <button onclick="toggleVideo()" id="videoBtn" class="btn-round"><i class="fas fa-video"></i></button>
+    </div>
+
+    <div id="setupUI">
+        <div class="mb-8">
+            <div class="w-20 h-20 bg-teal-600/20 rounded-3xl flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-users text-4xl text-teal-500"></i>
+            </div>
+            <h1 class="text-2xl font-bold">NexCall <span class="text-teal-500">Group</span></h1>
+            <p class="text-slate-500 text-sm mt-1">Encrypted Multi-Peer Line</p>
+        </div>
+
+        <div class="w-full max-w-xs space-y-4">
+            <div class="flex gap-2">
+                <input type="number" id="peer-id-input" placeholder="Partner's 6 Digits" 
+                       class="flex-1 bg-[#2a3942] rounded-xl p-4 outline-none border-2 border-transparent focus:border-teal-500 text-center font-bold">
+                <button onclick="addMember()" class="bg-white text-black w-14 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
             
-            <div id="audioModeUI" class="audio-only-bg">
-                <div class="caller-img pulse-ring"><i class="fas fa-user"></i></div>
-                <h3 id="connectedName" class="text-xl font-semibold">Secure Audio Call</h3>
-                <p class="text-teal-500 text-sm mt-2">End-to-End Encrypted</p>
-            </div>
-
-            <div class="self-view" id="selfBox">
-                <video id="localVideo" class="w-full h-full object-cover mirror" autoplay muted playsinline></video>
-            </div>
-
-            <div id="startUI" class="absolute inset-0 bg-[#0b141a] z-[60] flex flex-col items-center justify-center p-8 text-center">
-                <div class="mb-8">
-                    <div class="w-20 h-20 bg-teal-600/20 rounded-3xl flex items-center justify-center mx-auto mb-4">
-                        <i class="fas fa-shield-halved text-4xl text-teal-500"></i>
-                    </div>
-                    <h1 class="text-2xl font-bold tracking-tight">NexCall <span class="text-teal-500">Pro</span></h1>
-                    <p class="text-slate-500 text-sm mt-1">High-Security Communication</p>
+            <div id="selectedList" class="flex flex-wrap gap-2 justify-center min-h-[30px]">
                 </div>
 
-                <input type="number" id="peer-id" placeholder="Enter Partner's 6 Digits" 
-                       class="w-full max-w-xs bg-[#2a3942] rounded-2xl p-4 mb-4 outline-none border-2 border-transparent focus:border-teal-500 text-center text-lg font-bold tracking-widest">
-                
-                <div class="flex gap-4">
-                    <button onclick="makeCall('video')" class="btn-call-start rounded-2xl flex items-center justify-center text-white shadow-lg">
-                        <i class="fas fa-video"></i>
-                    </button>
-                    <button onclick="makeCall('audio')" class="bg-white text-black w-[120px] rounded-2xl font-bold flex items-center justify-center gap-2">
-                        <i class="fas fa-phone"></i> Audio
-                    </button>
-                </div>
-
-                <div class="mt-12 p-4 bg-white/5 rounded-2xl border border-white/10 w-full max-w-xs">
-                    <p class="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">My Secure ID</p>
-                    <div class="flex items-center justify-center gap-3 mt-1">
-                        <span id="my-id" class="text-teal-400 font-mono font-bold uppercase tracking-wider">NIC-XXXXXX</span>
-                        <i class="far fa-copy text-teal-500 cursor-pointer" onclick="copyID()"></i>
-                    </div>
-                </div>
-            </div>
-
-            <div id="activeControls" class="hidden absolute bottom-10 inset-x-0 flex justify-center items-center gap-6 z-[70]">
-                <button onclick="toggleAudio()" id="audioBtn" class="btn-action bg-white/10 backdrop-blur-md"><i class="fas fa-microphone"></i></button>
-                <button onclick="endCall()" class="w-[70px] h-[70px] rounded-full bg-red-600 flex items-center justify-center text-2xl shadow-2xl"><i class="fas fa-phone-slash"></i></button>
-                <button onclick="toggleVideo()" id="videoBtn" class="btn-action bg-white/10 backdrop-blur-md"><i class="fas fa-video"></i></button>
+            <div class="grid grid-cols-2 gap-3 pt-4">
+                <button onclick="initiateCall('video')" class="bg-teal-600 py-4 rounded-2xl font-bold flex items-center justify-center gap-2">
+                    <i class="fas fa-video"></i> Video
+                </button>
+                <button onclick="initiateCall('audio')" class="bg-slate-700 py-4 rounded-2xl font-bold flex items-center justify-center gap-2">
+                    <i class="fas fa-phone"></i> Audio
+                </button>
             </div>
         </div>
-    </main>
 
-    <nav class="nav-bar">
-        <div class="nav-item" onclick="switchTab('Chats')"><i class="fas fa-comment-alt"></i><span class="nav-text">Chats</span></div>
-        <div class="nav-item" onclick="switchTab('Updates')"><i class="fas fa-circle-notch"></i><span class="nav-text">Updates</span></div>
-        <div class="nav-item nav-active">
-            <div class="icon-bg"><i class="fas fa-phone"></i></div>
-            <span class="nav-text">Calls</span>
+        <div class="mt-10 opacity-60" onclick="copyMyID()">
+            <p class="text-[10px] uppercase tracking-widest mb-1">Your Identity</p>
+            <p id="my-id-display" class="font-mono text-teal-400 font-bold">NIC-XXXXXX</p>
         </div>
-    </nav>
+    </div>
 
     <div id="incomingCallUI">
-        <div class="caller-img pulse-ring"><i class="fas fa-user"></i></div>
-        <h2 class="text-2xl font-bold mb-1">Secure Line</h2>
-        <p id="incomingType" class="text-teal-500 font-medium tracking-wide uppercase text-xs mb-20">Incoming Video Call...</p>
+        <div class="w-24 h-24 bg-[#202c33] rounded-full flex items-center justify-center mb-6 border-2 border-teal-500">
+            <i class="fas fa-user-group text-3xl text-slate-400"></i>
+        </div>
+        <h2 class="text-2xl font-bold mb-1">Incoming Group Call</h2>
+        <p class="text-teal-500 animate-pulse text-sm mb-20 uppercase tracking-widest">Secure Multi-Line Ringing</p>
         
         <div class="flex gap-16">
-            <div class="flex flex-col items-center gap-3">
-                <button onclick="declineCall()" class="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center text-xl shadow-lg shadow-red-500/30"><i class="fas fa-times"></i></button>
-                <span class="text-xs text-slate-400 font-bold uppercase">Decline</span>
-            </div>
-            <div class="flex flex-col items-center gap-3">
-                <button onclick="acceptCall()" class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center text-xl shadow-lg shadow-green-500/30 animate-bounce"><i class="fas fa-phone"></i></button>
-                <span class="text-xs text-slate-400 font-bold uppercase">Accept</span>
-            </div>
+            <button onclick="location.reload()" class="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center text-xl shadow-lg"><i class="fas fa-times"></i></button>
+            <button onclick="acceptIncoming()" class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center text-xl shadow-lg animate-bounce"><i class="fas fa-phone"></i></button>
         </div>
         <audio id="ringtone" loop src="https://www.soundjay.com/phone/phone-calling-1.mp3"></audio>
     </div>
 
+    <nav class="nav-bar">
+        <div class="nav-item" onclick="alert('Chats coming soon')"><i class="fas fa-comment-alt"></i><span class="nav-text">Chats</span></div>
+        <div class="nav-item" onclick="alert('Updates coming soon')"><i class="fas fa-circle-notch"></i><span class="nav-text">Updates</span></div>
+        <div class="nav-item nav-active"><i><i class="fas fa-phone"></i></i><span class="nav-text">Calls</span></div>
+    </nav>
+
     <script>
-        let nicDigits = localStorage.getItem('user_nic') || prompt("Enter last 6 digits of NIC:");
+        let nicDigits = localStorage.getItem('user_nic') || prompt("Register: Enter last 6 digits of your NIC:");
         if(nicDigits?.length === 6) localStorage.setItem('user_nic', nicDigits);
         else location.reload();
 
         const peer = new Peer("NIC-" + nicDigits);
-        let localStream, currentCall, incomingCallData;
-        let isVideoMode = true;
+        let localStream;
+        let groupMembers = [];
+        let activeConnections = {};
 
-        // Initialize Local Media
-        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(s => {
-            localStream = s;
-            document.getElementById('localVideo').srcObject = s;
-        }).catch(e => alert("Please allow Camera/Mic access."));
+        // 1. Get Media
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
+            localStream = stream;
+            document.getElementById('localVideo').srcObject = stream;
+        });
 
-        peer.on('open', id => document.getElementById('my-id').innerText = id);
+        peer.on('open', id => document.getElementById('my-id-display').innerText = id);
 
-        // Handling Call Events
+        // 2. Handle Incoming Call
+        let incomingCallObj;
         peer.on('call', call => {
-            incomingCallData = call;
-            const isAudio = call.options?.metadata?.mode === 'audio';
-            document.getElementById('incomingType').innerText = isAudio ? "Incoming Audio Call..." : "Incoming Video Call...";
+            incomingCallObj = call;
             document.getElementById('incomingCallUI').style.display = 'flex';
             document.getElementById('ringtone').play();
         });
 
-        function makeCall(mode) {
-            const peerId = document.getElementById('peer-id').value;
-            if(peerId.length !== 6) return alert("Enter 6 digits");
-            
-            const options = { metadata: { mode: mode } };
-            const call = peer.call("NIC-" + peerId, localStream, options);
-            
-            if(mode === 'audio') switchAudioMode(true);
-            setupCall(call);
-        }
-
-        function acceptCall() {
+        function acceptIncoming() {
             document.getElementById('ringtone').pause();
             document.getElementById('incomingCallUI').style.display = 'none';
-            
-            const isAudio = incomingCallData.options?.metadata?.mode === 'audio';
-            if(isAudio) switchAudioMode(true);
-            
-            incomingCallData.answer(localStream);
-            setupCall(incomingCallData);
-        }
-
-        function setupCall(call) {
-            currentCall = call;
-            document.getElementById('startUI').classList.add('hidden');
+            document.getElementById('setupUI').classList.add('hidden');
             document.getElementById('activeControls').classList.remove('hidden');
             
-            call.on('stream', s => {
-                document.getElementById('remoteVideo').srcObject = s;
-            });
-            call.on('close', () => location.reload());
+            incomingCallObj.answer(localStream);
+            handlePeerStream(incomingCallObj);
         }
 
-        function switchAudioMode(enabled) {
-            document.getElementById('audioModeUI').style.display = enabled ? 'flex' : 'none';
-            document.getElementById('selfBox').style.display = enabled ? 'none' : 'block';
-            if(enabled) {
-                localStream.getVideoTracks().forEach(t => t.enabled = false);
+        // 3. Group Logic
+        function addMember() {
+            const val = document.getElementById('peer-id-input').value;
+            if(val.length === 6 && !groupMembers.includes("NIC-" + val)) {
+                const fullId = "NIC-" + val;
+                groupMembers.push(fullId);
+                
+                const tag = document.createElement('div');
+                tag.className = 'member-tag';
+                tag.innerText = val;
+                document.getElementById('selectedList').appendChild(tag);
+                document.getElementById('peer-id-input').value = "";
             }
         }
 
+        function initiateCall(mode) {
+            if(groupMembers.length === 0) return alert("Add at least one member ID");
+            
+            document.getElementById('setupUI').classList.add('hidden');
+            document.getElementById('activeControls').classList.remove('hidden');
+
+            if(mode === 'audio') {
+                localStream.getVideoTracks().forEach(t => t.enabled = false);
+                document.getElementById('videoBtn').classList.add('bg-white', 'text-black');
+            }
+
+            groupMembers.forEach(memberId => {
+                const call = peer.call(memberId, localStream, { metadata: { mode: mode } });
+                handlePeerStream(call);
+            });
+        }
+
+        function handlePeerStream(call) {
+            call.on('stream', remoteStream => {
+                if(!activeConnections[call.peer]) {
+                    createVideoElement(call.peer, remoteStream);
+                    activeConnections[call.peer] = call;
+                }
+            });
+            
+            call.on('close', () => {
+                const el = document.getElementById('box-' + call.peer);
+                if(el) el.remove();
+                delete activeConnections[call.peer];
+            });
+        }
+
+        function createVideoElement(peerId, stream) {
+            const container = document.getElementById('videoGrid');
+            const box = document.createElement('div');
+            box.id = 'box-' + peerId;
+            box.className = 'video-box';
+            
+            const video = document.createElement('video');
+            video.srcObject = stream;
+            video.autoplay = true;
+            video.playsInline = true;
+            
+            box.appendChild(video);
+            container.appendChild(box);
+        }
+
+        // 4. Controls
         function toggleAudio() {
             const t = localStream.getAudioTracks()[0];
             t.enabled = !t.enabled;
-            document.getElementById('audioBtn').classList.toggle('bg-white', !t.enabled);
-            document.getElementById('audioBtn').classList.toggle('text-black', !t.enabled);
+            document.getElementById('audioBtn').classList.toggle('bg-white');
+            document.getElementById('audioBtn').classList.toggle('text-black');
         }
 
         function toggleVideo() {
             const t = localStream.getVideoTracks()[0];
             t.enabled = !t.enabled;
-            document.getElementById('videoBtn').classList.toggle('bg-white', !t.enabled);
-            document.getElementById('videoBtn').classList.toggle('text-black', !t.enabled);
-            document.getElementById('selfBox').style.opacity = t.enabled ? "1" : "0.2";
+            document.getElementById('videoBtn').classList.toggle('bg-white');
+            document.getElementById('videoBtn').classList.toggle('text-black');
+            document.getElementById('myView').style.opacity = t.enabled ? "1" : "0.3";
         }
 
-        function endCall() {
-            if(currentCall) currentCall.close();
-            location.reload();
+        function copyMyID() {
+            navigator.clipboard.writeText(document.getElementById('my-id-display').innerText);
+            alert("Your ID Copied!");
         }
-
-        function declineCall() {
-            document.getElementById('ringtone').pause();
-            location.reload();
-        }
-
-        function copyID() {
-            navigator.clipboard.writeText(document.getElementById('my-id').innerText);
-            alert("ID Copied to Clipboard!");
-        }
-
-        function switchTab(name) { alert(name + " feature is being encrypted..."); }
     </script>
 </body>
 </html>
