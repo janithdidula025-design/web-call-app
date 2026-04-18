@@ -3,189 +3,212 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NexCall Pro | Secure Line</title>
+    <title>NexCall Pro | Premium Edition</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --wa-teal: #00a884; --wa-dark: #0b141a; }
-        body { background-color: var(--wa-dark); overscroll-behavior: none; font-family: 'Segoe UI', sans-serif; height: 100dvh; }
+        :root { --wa-teal: #00a884; --wa-dark: #0b141a; --wa-bg: #111b21; }
+        body { background-color: var(--wa-dark); color: white; font-family: 'Segoe UI', Roboto, Helvetica, sans-serif; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
         
-        /* Video Layout */
-        .video-wrapper { height: 100%; width: 100%; position: relative; overflow: hidden; background: #000; }
+        /* Video & Layout Management */
+        .app-content { flex: 1; position: relative; overflow: hidden; }
+        .video-wrapper { height: 100%; width: 100%; position: relative; background: #000; display: flex; align-items: center; justify-content: center; }
         .remote-video { width: 100%; height: 100%; object-fit: cover; }
         .self-view { 
-            position: absolute; top: 1rem; right: 1rem; 
-            width: 100px; height: 150px; border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.2); z-index: 50;
-            background: #202c33;
+            position: absolute; top: 1.5rem; right: 1rem; width: 110px; height: 160px; 
+            border-radius: 12px; border: 1.5px solid rgba(255,255,255,0.15); z-index: 50; 
+            overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5); 
         }
 
-        /* Bottom Sheet Fix */
-        .bottom-sheet {
-            position: fixed; bottom: 0; left: 0; right: 0;
-            background: linear-gradient(to top, rgba(11,20,26,1) 60%, transparent);
-            padding: 2.5rem 1rem; z-index: 100;
-            display: flex; flex-direction: column; align-items: center; gap: 1.5rem;
-            transition: transform 0.4s ease;
-        }
+        /* Fixed Navigation Style */
+        .nav-bar { height: 75px; background: var(--wa-bg); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #8696a0; width: 25%; }
+        .nav-active { color: white; }
+        .nav-active .icon-bg { background: #005c4b; color: #dcf8c6; border-radius: 20px; padding: 4px 18px; }
+        .nav-text { font-size: 12px; margin-top: 5px; font-weight: 600; }
 
         /* Icon Centering Fix */
-        .btn-circle {
-            width: 60px; height: 60px; border-radius: 50%;
-            display: flex; 
-            align-items: center; /* Vertical Center */
-            justify-content: center; /* Horizontal Center */
-            font-size: 1.4rem;
-            background: rgba(255, 255, 255, 0.1); 
-            color: white; 
-            transition: 0.2s;
-            border: none;
-            outline: none;
+        .btn-action { 
+            width: 55px; height: 55px; border-radius: 50%; display: flex; 
+            align-items: center; justify-content: center; font-size: 1.3rem; transition: 0.3s; 
         }
+        .btn-call-start { background: var(--wa-teal); width: 60px; height: 60px; }
 
-        .btn-danger { background: #ff3b30 !important; }
-        .btn-off { background: white !important; color: black !important; }
-        .hidden-ui { transform: translateY(100%); opacity: 0; }
+        /* Overlays */
+        #incomingCallUI { position: fixed; inset: 0; background: #0b141a; z-index: 1000; display: none; flex-direction: column; align-items: center; padding-top: 15%; }
+        .caller-img { width: 120px; height: 120px; background: #202c33; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 4rem; color: #8696a0; margin-bottom: 2rem; border: 2px solid var(--wa-teal); }
+        
+        /* Audio Mode UI */
+        .audio-only-bg { position: absolute; inset: 0; background: radial-gradient(circle, #202c33 0%, #0b141a 100%); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 45; }
+        
         .mirror { transform: scaleX(-1); }
-
-        /* Input Fix */
-        .peer-input {
-            background: #2a3942; border-radius: 12px; padding: 12px 16px;
-            outline: none; flex: 1; color: white; border: 1px solid transparent;
-        }
-        .peer-input:focus { border-color: var(--wa-teal); }
+        .pulse-ring { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(0, 168, 132, 0.4); } 70% { box-shadow: 0 0 0 20px rgba(0, 168, 132, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 168, 132, 0); } }
     </style>
 </head>
-<body class="text-white overflow-hidden">
+<body>
 
-    <div class="video-wrapper" onclick="toggleUIVisibility()">
-        <video id="remoteVideo" class="remote-video" autoplay playsinline></video>
-        <div class="self-view">
-            <video id="localVideo" class="w-full h-full object-cover mirror" autoplay muted playsinline></video>
-        </div>
+    <main class="app-content">
+        <div class="video-wrapper">
+            <video id="remoteVideo" class="remote-video" autoplay playsinline></video>
+            
+            <div id="audioModeUI" class="audio-only-bg">
+                <div class="caller-img pulse-ring"><i class="fas fa-user"></i></div>
+                <h3 id="connectedName" class="text-xl font-semibold">Secure Audio Call</h3>
+                <p class="text-teal-500 text-sm mt-2">End-to-End Encrypted</p>
+            </div>
 
-        <div id="statusOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-[#0b141a] z-40">
-            <div class="w-16 h-16 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <h2 class="text-xl font-medium mb-1">NexCall Pro</h2>
-            <p id="statusText" class="text-teal-500 text-xs tracking-widest uppercase">Initializing Line...</p>
-        </div>
-    </div>
+            <div class="self-view" id="selfBox">
+                <video id="localVideo" class="w-full h-full object-cover mirror" autoplay muted playsinline></video>
+            </div>
 
-    <div id="uiOverlay" class="bottom-sheet">
-        <div class="flex flex-col items-center gap-1">
-            <span class="text-[10px] text-slate-400 uppercase tracking-widest">My Identity</span>
-            <div class="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-full border border-white/10">
-                <span id="my-id" class="text-teal-400 font-bold font-mono text-sm uppercase">NIC-XXXXXX</span>
-                <button onclick="copyID()" class="text-slate-400 hover:text-white transition">
-                    <i class="far fa-copy text-sm"></i>
-                </button>
+            <div id="startUI" class="absolute inset-0 bg-[#0b141a] z-[60] flex flex-col items-center justify-center p-8 text-center">
+                <div class="mb-8">
+                    <div class="w-20 h-20 bg-teal-600/20 rounded-3xl flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-shield-halved text-4xl text-teal-500"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold tracking-tight">NexCall <span class="text-teal-500">Pro</span></h1>
+                    <p class="text-slate-500 text-sm mt-1">High-Security Communication</p>
+                </div>
+
+                <input type="number" id="peer-id" placeholder="Enter Partner's 6 Digits" 
+                       class="w-full max-w-xs bg-[#2a3942] rounded-2xl p-4 mb-4 outline-none border-2 border-transparent focus:border-teal-500 text-center text-lg font-bold tracking-widest">
+                
+                <div class="flex gap-4">
+                    <button onclick="makeCall('video')" class="btn-call-start rounded-2xl flex items-center justify-center text-white shadow-lg">
+                        <i class="fas fa-video"></i>
+                    </button>
+                    <button onclick="makeCall('audio')" class="bg-white text-black w-[120px] rounded-2xl font-bold flex items-center justify-center gap-2">
+                        <i class="fas fa-phone"></i> Audio
+                    </button>
+                </div>
+
+                <div class="mt-12 p-4 bg-white/5 rounded-2xl border border-white/10 w-full max-w-xs">
+                    <p class="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">My Secure ID</p>
+                    <div class="flex items-center justify-center gap-3 mt-1">
+                        <span id="my-id" class="text-teal-400 font-mono font-bold uppercase tracking-wider">NIC-XXXXXX</span>
+                        <i class="far fa-copy text-teal-500 cursor-pointer" onclick="copyID()"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div id="activeControls" class="hidden absolute bottom-10 inset-x-0 flex justify-center items-center gap-6 z-[70]">
+                <button onclick="toggleAudio()" id="audioBtn" class="btn-action bg-white/10 backdrop-blur-md"><i class="fas fa-microphone"></i></button>
+                <button onclick="endCall()" class="w-[70px] h-[70px] rounded-full bg-red-600 flex items-center justify-center text-2xl shadow-2xl"><i class="fas fa-phone-slash"></i></button>
+                <button onclick="toggleVideo()" id="videoBtn" class="btn-action bg-white/10 backdrop-blur-md"><i class="fas fa-video"></i></button>
             </div>
         </div>
+    </main>
 
-        <div class="flex gap-2 w-full max-w-xs" id="callBox">
-            <input type="number" id="peer-id" placeholder="Partner's 6 Digits" class="peer-input">
-            <button onclick="makeCall()" class="bg-teal-600 w-14 h-14 rounded-xl flex items-center justify-center hover:bg-teal-500 transition">
-                <i class="fas fa-video text-lg"></i>
-            </button>
+    <nav class="nav-bar">
+        <div class="nav-item" onclick="switchTab('Chats')"><i class="fas fa-comment-alt"></i><span class="nav-text">Chats</span></div>
+        <div class="nav-item" onclick="switchTab('Updates')"><i class="fas fa-circle-notch"></i><span class="nav-text">Updates</span></div>
+        <div class="nav-item nav-active">
+            <div class="icon-bg"><i class="fas fa-phone"></i></div>
+            <span class="nav-text">Calls</span>
         </div>
+    </nav>
 
-        <div class="flex items-center gap-6">
-            <button id="videoBtn" onclick="toggleVideo()" class="btn-circle">
-                <i class="fas fa-video"></i>
-            </button>
-            <button onclick="endCall()" class="btn-circle btn-danger">
-                <i class="fas fa-phone-slash"></i>
-            </button>
-            <button id="audioBtn" onclick="toggleAudio()" class="btn-circle">
-                <i class="fas fa-microphone"></i>
-            </button>
-        </div>
+    <div id="incomingCallUI">
+        <div class="caller-img pulse-ring"><i class="fas fa-user"></i></div>
+        <h2 class="text-2xl font-bold mb-1">Secure Line</h2>
+        <p id="incomingType" class="text-teal-500 font-medium tracking-wide uppercase text-xs mb-20">Incoming Video Call...</p>
         
-        <p class="text-[10px] text-slate-500 opacity-60">
-            <i class="fas fa-shield-alt mr-1"></i> End-to-end encrypted
-        </p>
+        <div class="flex gap-16">
+            <div class="flex flex-col items-center gap-3">
+                <button onclick="declineCall()" class="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center text-xl shadow-lg shadow-red-500/30"><i class="fas fa-times"></i></button>
+                <span class="text-xs text-slate-400 font-bold uppercase">Decline</span>
+            </div>
+            <div class="flex flex-col items-center gap-3">
+                <button onclick="acceptCall()" class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center text-xl shadow-lg shadow-green-500/30 animate-bounce"><i class="fas fa-phone"></i></button>
+                <span class="text-xs text-slate-400 font-bold uppercase">Accept</span>
+            </div>
+        </div>
+        <audio id="ringtone" loop src="https://www.soundjay.com/phone/phone-calling-1.mp3"></audio>
     </div>
 
     <script>
-        let nicDigits = localStorage.getItem('user_nic');
-        if (!nicDigits) {
-            nicDigits = prompt("Register: Enter last 6 digits of your NIC:");
-            if (nicDigits?.length === 6 && !isNaN(nicDigits)) {
-                localStorage.setItem('user_nic', nicDigits);
-            } else {
-                alert("Invalid input. Please enter 6 digits.");
-                location.reload();
-            }
-        }
+        let nicDigits = localStorage.getItem('user_nic') || prompt("Enter last 6 digits of NIC:");
+        if(nicDigits?.length === 6) localStorage.setItem('user_nic', nicDigits);
+        else location.reload();
 
         const peer = new Peer("NIC-" + nicDigits);
-        let localStream;
-        let currentCall;
+        let localStream, currentCall, incomingCallData;
+        let isVideoMode = true;
 
-        // Notification Setup
-        if ("Notification" in window && Notification.permission !== 'granted') {
-            Notification.requestPermission();
-        }
-
-        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
-            localStream = stream;
-            document.getElementById('localVideo').srcObject = stream;
-            document.getElementById('statusText').innerText = "System Online";
-        }).catch(err => {
-            alert("Camera access is required for video calls.");
-        });
+        // Initialize Local Media
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(s => {
+            localStream = s;
+            document.getElementById('localVideo').srcObject = s;
+        }).catch(e => alert("Please allow Camera/Mic access."));
 
         peer.on('open', id => document.getElementById('my-id').innerText = id);
 
+        // Handling Call Events
         peer.on('call', call => {
-            if (document.hidden) {
-                new Notification("Incoming Call", {
-                    body: "Tap to answer your secure video call.",
-                    icon: "https://cdn-icons-png.flaticon.com/512/174/174879.png"
-                });
-            }
-            
-            if (confirm("Incoming Video Call. Answer?")) {
-                call.answer(localStream);
-                setupStream(call);
-            }
+            incomingCallData = call;
+            const isAudio = call.options?.metadata?.mode === 'audio';
+            document.getElementById('incomingType').innerText = isAudio ? "Incoming Audio Call..." : "Incoming Video Call...";
+            document.getElementById('incomingCallUI').style.display = 'flex';
+            document.getElementById('ringtone').play();
         });
 
-        function makeCall() {
+        function makeCall(mode) {
             const peerId = document.getElementById('peer-id').value;
-            if(!peerId) return alert("Please enter Partner's ID");
-            const fullId = "NIC-" + peerId;
-            setupStream(peer.call(fullId, localStream));
+            if(peerId.length !== 6) return alert("Enter 6 digits");
+            
+            const options = { metadata: { mode: mode } };
+            const call = peer.call("NIC-" + peerId, localStream, options);
+            
+            if(mode === 'audio') switchAudioMode(true);
+            setupCall(call);
         }
 
-        function setupStream(call) {
+        function acceptCall() {
+            document.getElementById('ringtone').pause();
+            document.getElementById('incomingCallUI').style.display = 'none';
+            
+            const isAudio = incomingCallData.options?.metadata?.mode === 'audio';
+            if(isAudio) switchAudioMode(true);
+            
+            incomingCallData.answer(localStream);
+            setupCall(incomingCallData);
+        }
+
+        function setupCall(call) {
             currentCall = call;
-            call.on('stream', st => {
-                document.getElementById('remoteVideo').srcObject = st;
-                document.getElementById('statusOverlay').style.display = 'none';
-                document.getElementById('callBox').classList.add('hidden');
-                // Auto-hide UI after 4 seconds
-                setTimeout(() => toggleUIVisibility(), 4000);
+            document.getElementById('startUI').classList.add('hidden');
+            document.getElementById('activeControls').classList.remove('hidden');
+            
+            call.on('stream', s => {
+                document.getElementById('remoteVideo').srcObject = s;
             });
             call.on('close', () => location.reload());
         }
 
+        function switchAudioMode(enabled) {
+            document.getElementById('audioModeUI').style.display = enabled ? 'flex' : 'none';
+            document.getElementById('selfBox').style.display = enabled ? 'none' : 'block';
+            if(enabled) {
+                localStream.getVideoTracks().forEach(t => t.enabled = false);
+            }
+        }
+
         function toggleAudio() {
-            const track = localStream.getAudioTracks()[0];
-            track.enabled = !track.enabled;
-            document.getElementById('audioBtn').classList.toggle('btn-off', !track.enabled);
-            document.getElementById('audioBtn').innerHTML = track.enabled ? 
-                '<i class="fas fa-microphone"></i>' : '<i class="fas fa-microphone-slash"></i>';
+            const t = localStream.getAudioTracks()[0];
+            t.enabled = !t.enabled;
+            document.getElementById('audioBtn').classList.toggle('bg-white', !t.enabled);
+            document.getElementById('audioBtn').classList.toggle('text-black', !t.enabled);
         }
 
         function toggleVideo() {
-            const track = localStream.getVideoTracks()[0];
-            track.enabled = !track.enabled;
-            document.getElementById('videoBtn').classList.toggle('btn-off', !track.enabled);
-            document.getElementById('videoBtn').innerHTML = track.enabled ? 
-                '<i class="fas fa-video"></i>' : '<i class="fas fa-video-slash"></i>';
+            const t = localStream.getVideoTracks()[0];
+            t.enabled = !t.enabled;
+            document.getElementById('videoBtn').classList.toggle('bg-white', !t.enabled);
+            document.getElementById('videoBtn').classList.toggle('text-black', !t.enabled);
+            document.getElementById('selfBox').style.opacity = t.enabled ? "1" : "0.2";
         }
 
         function endCall() {
@@ -193,19 +216,17 @@
             location.reload();
         }
 
-        function toggleUIVisibility() {
-            document.getElementById('uiOverlay').classList.toggle('hidden-ui');
+        function declineCall() {
+            document.getElementById('ringtone').pause();
+            location.reload();
         }
 
         function copyID() {
-            const idText = document.getElementById('my-id').innerText;
-            navigator.clipboard.writeText(idText);
-            alert("ID Copied: " + idText);
+            navigator.clipboard.writeText(document.getElementById('my-id').innerText);
+            alert("ID Copied to Clipboard!");
         }
 
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
-        }
+        function switchTab(name) { alert(name + " feature is being encrypted..."); }
     </script>
 </body>
 </html>
