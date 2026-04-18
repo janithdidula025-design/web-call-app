@@ -51,3 +51,21 @@ self.addEventListener('notificationclick', (event) => {
         clients.openWindow('/')
     );
 });
+self.addEventListener('push', function(event) {
+    const options = {
+        body: 'Incoming Secure Call...',
+        icon: 'icon.png',
+        vibrate: [200, 100, 200, 100, 400],
+        data: { dateOfArrival: Date.now() },
+        actions: [
+            {action: 'answer', title: 'Answer'},
+            {action: 'close', title: 'Ignore'}
+        ]
+    };
+    event.waitUntil(self.registration.showNotification('NexCall Pro', options));
+});
+
+self.addEventListener('notificationclick', function(event) {
+    event.notification.close();
+    event.waitUntil(clients.openWindow('/'));
+});
