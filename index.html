@@ -3,198 +3,239 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WhatsApp Pro | Secure Hub</title>
+    <title>ChatApp | Secure Messenger</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <style>
         :root {
-            --wa-green: #00a884;
-            --wa-bg: #0b141a;
-            --wa-panel: #202c33;
-            --wa-bubble-me: #005c4b;
-            --wa-bubble-them: #202c33;
+            --brand-green: #00a884;
+            --main-bg: #0b141a;
+            --panel-bg: #202c33;
+            --bubble-me: #005c4b;
+            --bubble-them: #202c33;
         }
-        body { background-color: var(--wa-bg); color: #e9edef; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: var(--main-bg); color: #e9edef; font-family: 'Segoe UI', sans-serif; height: 100dvh; overflow: hidden; }
         
         .chat-wallpaper {
             background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
-            background-blend-mode: overlay;
+            background-blend-mode: overlay; 
             background-color: rgba(11, 20, 26, 0.95);
         }
 
-        .bubble {
-            position: relative;
-            padding: 8px 12px;
-            border-radius: 8px;
-            max-width: 80%;
-            font-size: 0.95rem;
-            box-shadow: 0 1px 1px rgba(0,0,0,0.2);
-        }
-        .bubble-me { background: var(--wa-bubble-me); align-self: flex-end; border-top-right-radius: 0; }
-        .bubble-them { background: var(--wa-bubble-them); align-self: flex-start; border-top-left-radius: 0; }
+        .bubble { position: relative; padding: 10px 14px; border-radius: 12px; max-width: 80%; font-size: 0.95rem; box-shadow: 0 1px 1px rgba(0,0,0,0.2); line-height: 1.4; }
+        .bubble-me { background: var(--bubble-me); align-self: flex-end; border-top-right-radius: 0; }
+        .bubble-them { background: var(--bubble-them); align-self: flex-start; border-top-left-radius: 0; }
         
-        .tab-active { border-bottom: 3px solid var(--wa-green); color: var(--wa-green); }
-        
-        /* Smooth Transitions */
-        .screen-transition { transition: transform 0.3s ease-in-out; }
+        .tab-active { border-bottom: 3px solid var(--brand-green); color: var(--brand-green); }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
     </style>
 </head>
-<body class="h-screen flex flex-col overflow-hidden">
+<body class="flex flex-col">
 
     <div id="authScreen" class="fixed inset-0 z-[5000] bg-[#0b141a] flex flex-col items-center justify-center p-10">
         <div class="text-center mb-10">
-            <div class="w-20 h-20 bg-[#25d366] rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-2xl rotate-12">
-                <i class="fab fa-whatsapp text-5xl text-white -rotate-12"></i>
+            <div class="w-20 h-20 bg-[#00a884] rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-2xl rotate-3">
+                <i class="fas fa-comment-alt text-4xl text-white"></i>
             </div>
-            <h1 class="text-2xl font-bold">WhatsApp Pro</h1>
-            <p class="text-[#8696a0]">Privacy Matters</p>
+            <h1 class="text-3xl font-extrabold tracking-tight">ChatApp</h1>
+            <p id="peerStatus" class="text-xs text-[#8696a0] mt-2 font-mono">Initializing secure nodes...</p>
         </div>
-        
         <div class="w-full max-w-sm space-y-4">
-            <input type="text" id="userName" placeholder="Your Name" class="w-full bg-[#2a3942] p-4 rounded-xl outline-none border border-white/5">
-            <div class="flex gap-2">
-                <span class="bg-[#2a3942] p-4 rounded-xl text-[#8696a0]">+94</span>
-                <input type="number" id="userPhone" placeholder="7x xxx xxxx" class="flex-1 bg-[#2a3942] p-4 rounded-xl outline-none">
-            </div>
-            <button onclick="registerUser()" class="w-full bg-[#00a884] text-[#0b141a] py-4 rounded-xl font-bold uppercase tracking-widest shadow-lg">Start Chatting</button>
+            <input type="text" id="userName" placeholder="Your Display Name" class="w-full bg-[#2a3942] p-4 rounded-xl outline-none border border-white/5 focus:ring-2 ring-[#00a884]">
+            <input type="number" id="userPhone" placeholder="Mobile Number (e.g. 771234567)" class="w-full bg-[#2a3942] p-4 rounded-xl outline-none border border-white/5 focus:ring-2 ring-[#00a884]">
+            <button onclick="registerUser()" class="w-full bg-[#00a884] text-[#0b141a] py-4 rounded-xl font-bold uppercase tracking-widest hover:opacity-90 transition">Start Chatting</button>
         </div>
     </div>
 
     <div id="homeScreen" class="hidden h-full flex flex-col">
-        <header class="bg-[#202c33] px-4 py-3 flex justify-between items-center shadow-md">
-            <h1 class="text-xl font-bold text-[#8696a0]">WhatsApp</h1>
+        <header class="bg-[#202c33] px-5 py-4 flex justify-between items-center shadow-lg">
+            <h1 class="text-2xl font-bold text-[#e9edef]">ChatApp</h1>
             <div class="flex gap-6 text-[#8696a0] text-lg">
-                <i class="fas fa-search"></i>
-                <i class="fas fa-ellipsis-v"></i>
+                <i class="fas fa-search cursor-pointer"></i>
+                <i class="fas fa-ellipsis-v cursor-pointer"></i>
             </div>
         </header>
 
-        <div class="flex bg-[#202c33] text-sm font-bold text-[#8696a0] uppercase border-b border-white/5">
-            <div class="flex-1 py-3 text-center tab-active">Chats</div>
-            <div class="flex-1 py-3 text-center">Status</div>
-            <div class="flex-1 py-3 text-center">Calls</div>
+        <div class="flex bg-[#202c33] text-sm font-bold text-[#8696a0] uppercase tracking-wider border-b border-white/5">
+            <div class="flex-1 py-4 text-center tab-active">Chats</div>
+            <div class="flex-1 py-4 text-center">Status</div>
+            <div class="flex-1 py-4 text-center">Calls</div>
         </div>
 
-        <div id="chatList" class="flex-1 overflow-y-auto">
-            </div>
+        <div class="p-4 bg-[#111b21] flex gap-2">
+            <input type="number" id="targetPhone" placeholder="Friend's Mobile Number" class="flex-1 bg-[#2a3942] p-3 rounded-xl text-sm outline-none border border-white/5">
+            <button onclick="startNewChat()" class="bg-[#00a884] px-5 rounded-xl text-black font-bold text-sm shadow-lg active:scale-95 transition">NEW CHAT</button>
+        </div>
 
-        <button class="fixed bottom-6 right-6 w-14 h-14 bg-[#00a884] rounded-full shadow-2xl flex items-center justify-center text-white text-xl">
-            <i class="fas fa-comment-dots"></i>
-        </button>
+        <div id="chatList" class="flex-1 overflow-y-auto bg-[#111b21]">
+            </div>
     </div>
 
     <div id="chatScreen" class="hidden fixed inset-0 z-[4000] bg-[#0b141a] flex flex-col">
-        <header class="bg-[#202c33] p-2 flex items-center gap-2">
-            <button onclick="backToHome()"><i class="fas fa-arrow-left px-2"></i></button>
-            <div class="w-10 h-10 bg-gradient-to-tr from-gray-600 to-gray-400 rounded-full"></div>
+        <header class="bg-[#202c33] p-3 flex items-center gap-3 shadow-md">
+            <button onclick="backToHome()" class="p-1"><i class="fas fa-arrow-left text-lg"></i></button>
+            <div id="chatAvatar" class="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-700 rounded-full flex items-center justify-center font-bold text-white shadow-inner">?</div>
             <div class="flex-1">
-                <h2 id="targetName" class="text-sm font-bold truncate leading-tight">Receiver</h2>
-                <p class="text-[10px] text-[#00a884]">online</p>
+                <h2 id="targetDisplay" class="text-sm font-bold tracking-wide">Connecting...</h2>
+                <p id="connectionStatus" class="text-[10px] text-gray-400">waiting for peer</p>
             </div>
-            <div class="flex gap-5 px-3 text-[#aebac1]">
-                <button onclick="launchVideoCall()"><i class="fas fa-video"></i></button>
-                <i class="fas fa-phone"></i>
-                <i class="fas fa-ellipsis-v"></i>
+            <div class="flex gap-6 px-3 text-[#aebac1]">
+                <i class="fas fa-video cursor-pointer"></i>
+                <i class="fas fa-phone cursor-pointer"></i>
             </div>
         </header>
 
-        <div id="messageBox" class="flex-1 chat-wallpaper overflow-y-auto p-4 flex flex-col gap-2">
+        <div id="messageBox" class="flex-1 chat-wallpaper overflow-y-auto p-4 flex flex-col gap-3">
             </div>
 
-        <footer class="p-2 flex items-center gap-2 bg-[#202c33]">
-            <div class="flex-1 bg-[#2a3942] rounded-full flex items-center px-4 py-2 gap-3">
-                <i class="far fa-smile text-[#8696a0] text-xl"></i>
-                <input type="text" id="mainInput" placeholder="Message" class="bg-transparent flex-1 outline-none text-sm">
-                <i class="fas fa-paperclip text-[#8696a0]"></i>
+        <footer class="p-3 bg-[#202c33] flex items-center gap-3">
+            <div class="flex-1 bg-[#2a3942] rounded-full flex items-center px-4 py-1 gap-3">
+                <i class="far fa-smile text-[#8696a0] text-xl cursor-pointer"></i>
+                <input type="text" id="msgInput" placeholder="Type a message..." class="bg-transparent flex-1 py-2 outline-none text-sm text-white">
+                <i class="fas fa-paperclip text-[#8696a0] -rotate-45 cursor-pointer"></i>
             </div>
-            <button onclick="handleSendMessage()" class="w-12 h-12 bg-[#00a884] rounded-full flex items-center justify-center text-white shadow-lg">
-                <i class="fas fa-paper-plane"></i>
+            <button onclick="sendRealMessage()" class="w-12 h-12 bg-[#00a884] rounded-full flex items-center justify-center text-[#0b141a] shadow-lg active:scale-90 transition">
+                <i class="fas fa-paper-plane text-xl"></i>
             </button>
         </footer>
     </div>
 
     <script>
-        let userData = JSON.parse(localStorage.getItem('wa_pro_user'));
-        let activeRecipient = null;
+        let peer, conn;
+        let myId = "";
+        let userData = JSON.parse(localStorage.getItem('chatapp_user'));
+        let activeChats = JSON.parse(localStorage.getItem('chatapp_history')) || [];
 
-        // Init App
+        // Application Start Logic
         if(userData) {
-            document.getElementById('authScreen').classList.add('hidden');
-            document.getElementById('homeScreen').classList.remove('hidden');
-            loadChatList();
+            initPeer();
         }
 
         function registerUser() {
             const name = document.getElementById('userName').value;
             const phone = document.getElementById('userPhone').value;
-            if(!name || phone.length < 9) return alert("Enter valid details");
-
-            userData = { name, phone, id: 'WA-' + phone };
-            localStorage.setItem('wa_pro_user', JSON.stringify(userData));
-            location.reload();
+            if(!name || phone.length < 9) return alert("Please enter a valid name and phone number");
+            
+            userData = { name, phone };
+            localStorage.setItem('chatapp_user', JSON.stringify(userData));
+            initPeer();
         }
 
-        function loadChatList() {
-            const list = document.getElementById('chatList');
-            // Sample Data - Firebase එකෙන් මේවා ගන්න පුළුවන්
-            const contacts = [
-                { name: "ADM Support", phone: "0112233445", msg: "Welcome to NexCall Hub!" },
-                { name: "Development Team", phone: "0778899001", msg: "UI Update is live." }
-            ];
+        function initPeer() {
+            document.getElementById('authScreen').classList.add('hidden');
+            document.getElementById('homeScreen').classList.remove('hidden');
+            
+            myId = "CHATA-" + userData.phone;
+            peer = new Peer(myId);
 
-            list.innerHTML = contacts.map(c => `
-                <div onclick="openChat('${c.name}', '${c.phone}')" class="flex items-center gap-4 p-4 active:bg-[#202c33] transition">
-                    <div class="w-14 h-14 bg-emerald-700 rounded-full flex items-center justify-center font-bold text-xl uppercase">${c.name[0]}</div>
-                    <div class="flex-1 border-b border-white/5 pb-4">
-                        <div class="flex justify-between mb-1">
-                            <span class="font-bold">${c.name}</span>
-                            <span class="text-xs text-[#8696a0]">Just now</span>
+            peer.on('open', (id) => {
+                console.log("Connected to PeerServer as: " + id);
+                renderChatList();
+            });
+
+            // Handle incoming message connections
+            peer.on('connection', (incomingConn) => {
+                conn = incomingConn;
+                setupChatListeners();
+                const senderPhone = conn.peer.replace("CHATA-", "");
+                addChatToList(senderPhone, "User " + senderPhone);
+                openChatWindow(senderPhone, "User " + senderPhone);
+            });
+        }
+
+        function startNewChat() {
+            const phone = document.getElementById('targetPhone').value;
+            if(!phone || phone === userData.phone) return alert("Enter a valid friend's number");
+            openChatWindow(phone, "User " + phone);
+        }
+
+        function openChatWindow(phone, name) {
+            const targetId = "CHATA-" + phone;
+            document.getElementById('chatScreen').classList.remove('hidden');
+            document.getElementById('targetDisplay').innerText = name;
+            document.getElementById('chatAvatar').innerText = name[0].toUpperCase();
+            document.getElementById('messageBox').innerHTML = ""; // Clear for new session
+            
+            conn = peer.connect(targetId);
+            setupChatListeners();
+            addChatToList(phone, name);
+        }
+
+        function setupChatListeners() {
+            conn.on('open', () => {
+                document.getElementById('connectionStatus').innerText = "Online";
+                document.getElementById('connectionStatus').className = "text-[10px] text-[#00a884] font-bold";
+            });
+
+            conn.on('data', (data) => {
+                displayMessage(data, 'them');
+            });
+
+            conn.on('close', () => {
+                document.getElementById('connectionStatus').innerText = "Offline";
+                document.getElementById('connectionStatus').className = "text-[10px] text-gray-400";
+            });
+        }
+
+        function sendRealMessage() {
+            const input = document.getElementById('msgInput');
+            if(!input.value || !conn) return;
+
+            conn.send(input.value);
+            displayMessage(input.value, 'me');
+            input.value = '';
+        }
+
+        function displayMessage(text, type) {
+            const box = document.getElementById('messageBox');
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `bubble bubble-${type} animate-fade-in`;
+            msgDiv.innerHTML = `
+                ${text}
+                <span class="text-[9px] opacity-40 block text-right mt-1">${time}</span>
+            `;
+            
+            box.appendChild(msgDiv);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function addChatToList(phone, name) {
+            if(!activeChats.find(c => c.phone === phone)) {
+                activeChats.unshift({phone, name});
+                localStorage.setItem('chatapp_history', JSON.stringify(activeChats));
+                renderChatList();
+            }
+        }
+
+        function renderChatList() {
+            const list = document.getElementById('chatList');
+            if(activeChats.length === 0) {
+                list.innerHTML = `<div class="p-10 text-center text-gray-500 text-sm">No recent chats. Start a new one above!</div>`;
+                return;
+            }
+            list.innerHTML = activeChats.map(c => `
+                <div onclick="openChatWindow('${c.phone}', '${c.name}')" class="flex items-center gap-4 p-4 border-b border-white/5 active:bg-[#202c33] transition cursor-pointer">
+                    <div class="w-14 h-14 bg-emerald-800 rounded-full flex items-center justify-center font-bold text-lg text-white shadow-lg">${c.name[0].toUpperCase()}</div>
+                    <div class="flex-1">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="font-bold text-[#e9edef]">${c.name}</span>
+                            <span class="text-[10px] text-gray-500 italic">Connected</span>
                         </div>
-                        <p class="text-sm text-[#8696a0] truncate">${c.msg}</p>
+                        <p class="text-xs text-gray-400 truncate">Tap to open secure chat channel</p>
                     </div>
                 </div>
             `).join('');
         }
 
-        function openChat(name, phone) {
-            activeRecipient = phone;
-            document.getElementById('chatScreen').classList.remove('hidden');
-            document.getElementById('targetName').innerText = name;
-            document.getElementById('messageBox').innerHTML = ''; // Clear old messages
-        }
-
         function backToHome() {
             document.getElementById('chatScreen').classList.add('hidden');
-        }
-
-        function handleSendMessage() {
-            const input = document.getElementById('mainInput');
-            if(!input.value) return;
-
-            const box = document.getElementById('messageBox');
-            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            
-            const msgDiv = document.createElement('div');
-            msgDiv.className = 'bubble bubble-me animate-fade-in';
-            msgDiv.innerHTML = `
-                ${input.value}
-                <span class="text-[10px] opacity-60 ml-2 mt-1 block text-right">
-                    ${time} <i class="fas fa-check-double text-blue-400"></i>
-                </span>
-            `;
-            
-            box.appendChild(msgDiv);
-            input.value = '';
-            box.scrollTop = box.scrollHeight;
-        }
-
-        function launchVideoCall() {
-            // මෙතනට ඔයාගේ NexCall Peer ID එක පාස් කරන්න පුළුවන්
-            const callId = activeRecipient;
-            alert(`Initiating Secure Video Call to Node: ${callId}\nPowered by NexCall Engine`);
-            // location.href = `videocall.html?target=${callId}`; // වෙනම file එකකට යවන්න පුළුවන්
         }
     </script>
 </body>
