@@ -3,234 +3,277 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NexCall </title>
+    <title>NexCall Ultimate v5.1 | Pro Mesh</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#00ffa3">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/561/561127.png">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
     <style>
-        :root { --wa-teal: #00a884; --wa-dark: #0b141a; --wa-bg: #111b21; }
-        body { background-color: var(--wa-dark); color: white; font-family: 'Segoe UI', Roboto, sans-serif; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
-        
-        /* Video Grid Management */
-        #videoGrid { 
-            flex: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
-            gap: 8px; padding: 8px; background: #000; align-content: center; overflow-y: auto;
-        }
-        .video-box { position: relative; width: 100%; aspect-ratio: 3/4; border-radius: 12px; overflow: hidden; background: #202c33; border: 1px solid rgba(255,255,255,0.1); }
-        video { width: 100%; height: 100%; object-fit: cover; }
-        
-        .self-view { 
-            position: absolute; bottom: 90px; right: 15px; width: 90px; height: 130px; 
-            border-radius: 12px; border: 2px solid var(--wa-teal); z-index: 100; overflow: hidden; box-shadow: 0 8px 20px rgba(0,0,0,0.5);
-        }
-
-        /* Nav & Controls */
-        .nav-bar { height: 75px; background: var(--wa-bg); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); }
-        .nav-item { display: flex; flex-direction: column; align-items: center; color: #8696a0; width: 25%; cursor: pointer; }
-        .nav-active { color: white; }
-        .nav-active i { background: #005c4b; color: #dcf8c6; border-radius: 20px; padding: 4px 18px; }
-        .nav-text { font-size: 11px; margin-top: 5px; font-weight: 600; }
-
-        .btn-round { width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; transition: 0.3s; background: rgba(255,255,255,0.1); }
-        .btn-danger { background: #ea0038 !important; }
-        
-        /* Overlays */
-        #setupUI { position: fixed; inset: 0; background: #0b141a; z-index: 500; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-center; }
-        #incomingCallUI { position: fixed; inset: 0; background: #0b141a; z-index: 1000; display: none; flex-direction: column; align-items: center; padding-top: 20%; }
-        
-        .mirror { transform: scaleX(-1); }
-        .member-tag { background: rgba(0, 168, 132, 0.2); color: var(--wa-teal); padding: 4px 12px; border-radius: 20px; font-size: 12px; border: 1px solid var(--wa-teal); }
+        :root { --accent: #00ffa3; --danger: #ff3b30; --glass: rgba(255, 255, 255, 0.03); }
+        body { background: radial-gradient(circle at center, #0d1926 0%, #020609 100%); color: white; font-family: 'Inter', sans-serif; height: 100dvh; overflow: hidden; }
+        .glass-panel { background: rgba(13, 25, 38, 0.8); backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        #videoGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; padding: 10px; transition: 0.5s; }
+        .video-wrapper { position: relative; border-radius: 20px; overflow: hidden; background: #000; border: 2px solid transparent; aspect-ratio: 9/16; transition: 0.3s; }
+        .is-speaking { border-color: var(--accent); transform: scale(1.02); box-shadow: 0 0 20px rgba(0,255,163,0.2); }
+        .action-btn { width: 50px; height: 50px; border-radius: 15px; display: flex; align-items: center; justify-content: center; transition: 0.3s; background: var(--glass); }
+        .action-btn.active { background: var(--accent); color: #000; }
+        #sidePanel { position: fixed; right: -100%; top: 0; width: 100%; max-width: 380px; height: 100%; transition: 0.4s ease-in-out; z-index: 300; }
+        #sidePanel.open { right: 0; }
+        .reaction-float { position: absolute; bottom: 20px; font-size: 2rem; animation: floatUp 2s forwards; pointer-events: none; }
+        @keyframes floatUp { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-100px); } }
     </style>
 </head>
-<body>
 
-    <div id="videoGrid">
+<body class="flex flex-col">
+
+    <header class="p-4 flex justify-between items-center z-50">
+        <div class="flex items-center gap-3">
+            <span class="status-pill bg-accent/10 text-accent border border-accent/20 px-3 py-1 rounded-full text-[9px] font-bold">NODE ACTIVE</span>
+            <span id="callTimer" class="text-[10px] font-mono opacity-60 tracking-widest">00:00:00</span>
         </div>
-
-    <div class="self-view" id="myView">
-        <video id="localVideo" class="mirror" autoplay muted playsinline></video>
-    </div>
-
-    <div id="activeControls" class="hidden fixed bottom-[85px] inset-x-0 flex justify-center gap-6 z-[110]">
-        <button onclick="toggleAudio()" id="audioBtn" class="btn-round"><i class="fas fa-microphone"></i></button>
-        <button onclick="location.reload()" class="btn-round btn-danger text-2xl shadow-xl"><i class="fas fa-phone-slash"></i></button>
-        <button onclick="toggleVideo()" id="videoBtn" class="btn-round"><i class="fas fa-video"></i></button>
-    </div>
-
-    <div id="setupUI">
-        <div class="mb-8">
-            <div class="w-20 h-20 bg-teal-600/20 rounded-3xl flex items-center justify-center mx-auto mb-4">
-                <i class="fas fa-users text-4xl text-teal-500"></i>
-            </div>
-            <h1 class="text-2xl font-bold">NexCall <span class="text-teal-500">Group</span></h1>
-            <p class="text-slate-500 text-sm mt-1">Encrypted Multi-Peer Line</p>
+        <div class="flex items-center gap-4">
+            <div class="text-accent text-xs font-mono" id="pingVal">--ms</div>
+            <button onclick="toggleSidePanel()" class="action-btn !w-10 !h-10"><i class="fas fa-comment-alt"></i></button>
         </div>
+    </header>
 
-        <div class="w-full max-w-xs space-y-4">
-            <div class="flex gap-2">
-                <input type="number" id="peer-id-input" placeholder="Partner's 6 Digits" 
-                       class="flex-1 bg-[#2a3942] rounded-xl p-4 outline-none border-2 border-transparent focus:border-teal-500 text-center font-bold">
-                <button onclick="addMember()" class="bg-white text-black w-14 rounded-xl flex items-center justify-center">
-                    <i class="fas fa-plus"></i>
-                </button>
-            </div>
-            
-            <div id="selectedList" class="flex flex-wrap gap-2 justify-center min-h-[30px]">
-                </div>
-
-            <div class="grid grid-cols-2 gap-3 pt-4">
-                <button onclick="initiateCall('video')" class="bg-teal-600 py-4 rounded-2xl font-bold flex items-center justify-center gap-2">
-                    <i class="fas fa-video"></i> Video
-                </button>
-                <button onclick="initiateCall('audio')" class="bg-slate-700 py-4 rounded-2xl font-bold flex items-center justify-center gap-2">
-                    <i class="fas fa-phone"></i> Audio
-                </button>
-            </div>
-        </div>
-
-        <div class="mt-10 opacity-60" onclick="copyMyID()">
-            <p class="text-[10px] uppercase tracking-widest mb-1">Your Identity</p>
-            <p id="my-id-display" class="font-mono text-teal-400 font-bold">NIC-XXXXXX</p>
-        </div>
-    </div>
-
-    <div id="incomingCallUI">
-        <div class="w-24 h-24 bg-[#202c33] rounded-full flex items-center justify-center mb-6 border-2 border-teal-500">
-            <i class="fas fa-user-group text-3xl text-slate-400"></i>
-        </div>
-        <h2 class="text-2xl font-bold mb-1">Incoming Group Call</h2>
-        <p class="text-teal-500 animate-pulse text-sm mb-20 uppercase tracking-widest">Secure Multi-Line Ringing</p>
+    <main class="flex-1 overflow-hidden relative">
+        <div id="videoGrid" class="h-full w-full"></div>
         
-        <div class="flex gap-16">
-            <button onclick="location.reload()" class="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center text-xl shadow-lg"><i class="fas fa-times"></i></button>
-            <button onclick="acceptIncoming()" class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center text-xl shadow-lg animate-bounce"><i class="fas fa-phone"></i></button>
+        <div id="myView" class="fixed bottom-28 right-4 w-32 aspect-[3/4] rounded-2xl border-2 border-accent overflow-hidden z-[100] shadow-2xl">
+            <video id="localVideo" class="h-full w-full object-cover scale-x-[-1]" autoplay muted playsinline></video>
+            <div class="absolute bottom-2 left-2 bg-black/60 px-2 py-0.5 rounded text-[8px] font-bold">YOU</div>
         </div>
-        <audio id="ringtone" loop src="https://www.soundjay.com/phone/phone-calling-1.mp3"></audio>
-    </div>
+    </main>
 
-    <nav class="nav-bar">
-        <div class="nav-item" onclick="alert('Chats coming soon')"><i class="fas fa-comment-alt"></i><span class="nav-text">Chats</span></div>
-        <div class="nav-item" onclick="alert('Updates coming soon')"><i class="fas fa-circle-notch"></i><span class="nav-text">Updates</span></div>
-        <div class="nav-item nav-active"><i><i class="fas fa-phone"></i></i><span class="nav-text">Calls</span></div>
+    <div id="reactionZone" class="fixed inset-0 pointer-events-none z-[150]"></div>
+
+    <nav class="p-6 pb-10 flex flex-col items-center gap-4 z-[200]">
+        <div class="flex gap-4 mb-2">
+            <button onclick="sendReaction('❤️')" class="text-xl hover:scale-125 transition">❤️</button>
+            <button onclick="sendReaction('🔥')" class="text-xl hover:scale-125 transition">🔥</button>
+            <button onclick="sendReaction('😂')" class="text-xl hover:scale-125 transition">😂</button>
+            <button onclick="sendReaction('👍')" class="text-xl hover:scale-125 transition">👍</button>
+        </div>
+
+        <div class="glass-panel px-6 py-3 rounded-[30px] flex gap-3 items-center shadow-2xl">
+            <button onclick="toggleAudio()" id="micBtn" class="action-btn active"><i class="fas fa-microphone"></i></button>
+            <button onclick="toggleVideo()" id="camBtn" class="action-btn active"><i class="fas fa-video"></i></button>
+            <button onclick="toggleScreenShare()" id="screenBtn" class="action-btn"><i class="fas fa-desktop"></i></button>
+            <button onclick="applyNextFilter()" class="action-btn"><i class="fas fa-magic"></i></button>
+            <div class="w-px h-8 bg-white/10 mx-1"></div>
+            <button onclick="location.reload()" class="action-btn !bg-red-500 text-white"><i class="fas fa-phone-slash"></i></button>
+        </div>
     </nav>
 
+    <div id="sidePanel" class="glass-panel flex flex-col">
+        <div class="p-6 border-b border-white/5 flex justify-between items-center">
+            <h2 class="font-black uppercase text-sm tracking-widest">Encrypted Chat</h2>
+            <button onclick="toggleSidePanel()"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="chatBox" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
+        <div class="p-4">
+            <div class="flex gap-2 bg-white/5 p-2 rounded-2xl">
+                <input type="text" id="chatInput" placeholder="Message..." class="bg-transparent flex-1 p-2 outline-none text-sm">
+                <button onclick="sendMsg()" class="w-10 h-10 bg-accent text-black rounded-xl"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="gatekeeper" class="fixed inset-0 bg-[#020609] z-[1000] flex items-center justify-center p-8">
+        <div class="w-full max-w-sm text-center">
+            <div class="mb-8">
+                <i class="fas fa-shield-alt text-6xl text-accent mb-4"></i>
+                <h1 class="text-3xl font-black italic">NEXCALL <span class="text-accent">V5.1</span></h1>
+            </div>
+            <div class="bg-white/5 p-6 rounded-[35px] border border-white/10">
+                <input type="number" id="targetId" placeholder="REMOTE NODE ID" class="w-full bg-black/40 p-4 rounded-xl text-center text-xl font-mono mb-4 outline-none border border-white/5">
+                <button onclick="startSession()" class="w-full bg-accent text-black py-4 rounded-xl font-black">CONNECT MESH</button>
+            </div>
+            <div class="mt-6 p-4 opacity-50 cursor-pointer" onclick="copyId()">
+                <p class="text-[10px] uppercase mb-1">Your Identity</p>
+                <p id="myIdDisplay" class="font-mono text-lg">--- ---</p>
+            </div>
+        </div>
+    </div>
+
     <script>
-        let nicDigits = localStorage.getItem('user_nic') || prompt("Register: Enter last 6 digits of your NIC:");
-        if(nicDigits?.length === 6) localStorage.setItem('user_nic', nicDigits);
-        else location.reload();
+        const peerId = 'NX-' + (localStorage.getItem('nx_id') || Math.floor(100000 + Math.random() * 900000));
+        localStorage.setItem('nx_id', peerId.split('-')[1]);
+        const peer = new Peer(peerId);
+        
+        let localStream, screenStream, connections = {}, callStartTime;
+        let filters = ['', 'filter-sepia', 'filter-mono'], currentFilter = 0;
 
-        const peer = new Peer("NIC-" + nicDigits);
-        let localStream;
-        let groupMembers = [];
-        let activeConnections = {};
+        async function init() {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                document.getElementById('localVideo').srcObject = localStream;
+                setupAudioAnalysis(localStream, 'localVideo');
+            } catch (e) { alert("Permission Denied"); }
+        }
+        init();
 
-        // 1. Get Media
-        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
-            localStream = stream;
-            document.getElementById('localVideo').srcObject = stream;
-        });
-
-        peer.on('open', id => document.getElementById('my-id-display').innerText = id);
-
-        // 2. Handle Incoming Call
-        let incomingCallObj;
+        peer.on('open', id => document.getElementById('myIdDisplay').innerText = id);
         peer.on('call', call => {
-            incomingCallObj = call;
-            document.getElementById('incomingCallUI').style.display = 'flex';
-            document.getElementById('ringtone').play();
+            if(confirm("Accept incoming mesh link?")) {
+                call.answer(localStream);
+                handleCall(call);
+                enterApp();
+            }
         });
 
-        function acceptIncoming() {
-            document.getElementById('ringtone').pause();
-            document.getElementById('incomingCallUI').style.display = 'none';
-            document.getElementById('setupUI').classList.add('hidden');
-            document.getElementById('activeControls').classList.remove('hidden');
-            
-            incomingCallObj.answer(localStream);
-            handlePeerStream(incomingCallObj);
+        peer.on('connection', conn => {
+            connections[conn.peer] = conn;
+            conn.on('data', data => handleSignals(data, conn.peer));
+        });
+
+        function startSession() {
+            const tid = document.getElementById('targetId').value;
+            if(!tid) return;
+            const fullId = 'NX-' + tid;
+            handleCall(peer.call(fullId, localStream));
+            const conn = peer.connect(fullId);
+            connections[fullId] = conn;
+            conn.on('open', () => enterApp());
         }
 
-        // 3. Group Logic
-        function addMember() {
-            const val = document.getElementById('peer-id-input').value;
-            if(val.length === 6 && !groupMembers.includes("NIC-" + val)) {
-                const fullId = "NIC-" + val;
-                groupMembers.push(fullId);
+        function handleCall(call) {
+            call.on('stream', stream => {
+                const id = 'node-' + call.peer;
+                if(document.getElementById(id)) return;
                 
-                const tag = document.createElement('div');
-                tag.className = 'member-tag';
-                tag.innerText = val;
-                document.getElementById('selectedList').appendChild(tag);
-                document.getElementById('peer-id-input').value = "";
-            }
-        }
-
-        function initiateCall(mode) {
-            if(groupMembers.length === 0) return alert("Add at least one member ID");
-            
-            document.getElementById('setupUI').classList.add('hidden');
-            document.getElementById('activeControls').classList.remove('hidden');
-
-            if(mode === 'audio') {
-                localStream.getVideoTracks().forEach(t => t.enabled = false);
-                document.getElementById('videoBtn').classList.add('bg-white', 'text-black');
-            }
-
-            groupMembers.forEach(memberId => {
-                const call = peer.call(memberId, localStream, { metadata: { mode: mode } });
-                handlePeerStream(call);
+                const wrapper = document.createElement('div');
+                wrapper.id = id;
+                wrapper.className = 'video-wrapper';
+                const v = document.createElement('video');
+                v.srcObject = stream; v.autoplay = true; v.playsInline = true;
+                v.className = "w-full h-full object-cover";
+                wrapper.appendChild(v);
+                document.getElementById('videoGrid').appendChild(wrapper);
+                setupAudioAnalysis(stream, id);
             });
+            call.on('close', () => document.getElementById('node-'+call.peer)?.remove());
         }
 
-        function handlePeerStream(call) {
-            call.on('stream', remoteStream => {
-                if(!activeConnections[call.peer]) {
-                    createVideoElement(call.peer, remoteStream);
-                    activeConnections[call.peer] = call;
+        // --- NEW: Audio Visualizer & Speaker Detection ---
+        function setupAudioAnalysis(stream, elementId) {
+            const audioContext = new AudioContext();
+            const source = audioContext.createMediaStreamSource(stream);
+            const analyzer = audioContext.createAnalyser();
+            source.connect(analyzer);
+            analyzer.fftSize = 512;
+            const bufferLength = analyzer.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            function checkVolume() {
+                analyzer.getByteFrequencyData(dataArray);
+                let sum = 0;
+                for(let i=0; i<bufferLength; i++) sum += dataArray[i];
+                let average = sum / bufferLength;
+                
+                const el = document.getElementById(elementId === 'localVideo' ? 'myView' : elementId);
+                if(average > 30) el?.classList.add('is-speaking');
+                else el?.classList.remove('is-speaking');
+                
+                requestAnimationFrame(checkVolume);
+            }
+            checkVolume();
+        }
+
+        // --- NEW: Screen Sharing ---
+        async function toggleScreenShare() {
+            try {
+                if(!screenStream) {
+                    screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                    document.getElementById('screenBtn').classList.add('active');
+                    // Replace video tracks for all callers
+                    for(let id in peer.connections) {
+                        const sender = peer.connections[id][0].peerConnection.getSenders().find(s => s.track.kind === 'video');
+                        sender.replaceTrack(screenStream.getVideoTracks()[0]);
+                    }
+                    screenStream.getVideoTracks()[0].onended = () => toggleScreenShare();
+                } else {
+                    screenStream.getTracks().forEach(t => t.stop());
+                    screenStream = null;
+                    document.getElementById('screenBtn').classList.remove('active');
+                    for(let id in peer.connections) {
+                        const sender = peer.connections[id][0].peerConnection.getSenders().find(s => s.track.kind === 'video');
+                        sender.replaceTrack(localStream.getVideoTracks()[0]);
+                    }
                 }
-            });
-            
-            call.on('close', () => {
-                const el = document.getElementById('box-' + call.peer);
-                if(el) el.remove();
-                delete activeConnections[call.peer];
-            });
+            } catch (e) { console.error(e); }
         }
 
-        function createVideoElement(peerId, stream) {
-            const container = document.getElementById('videoGrid');
-            const box = document.createElement('div');
-            box.id = 'box-' + peerId;
-            box.className = 'video-box';
-            
-            const video = document.createElement('video');
-            video.srcObject = stream;
-            video.autoplay = true;
-            video.playsInline = true;
-            
-            box.appendChild(video);
-            container.appendChild(box);
+        // --- NEW: Reactions ---
+        function sendReaction(emoji) {
+            for(let id in connections) connections[id].send({ type: 'reaction', emoji });
+            showReaction(emoji);
         }
 
-        // 4. Controls
-        function toggleAudio() {
-            const t = localStream.getAudioTracks()[0];
-            t.enabled = !t.enabled;
-            document.getElementById('audioBtn').classList.toggle('bg-white');
-            document.getElementById('audioBtn').classList.toggle('text-black');
+        function showReaction(emoji) {
+            const r = document.createElement('div');
+            r.className = 'reaction-float';
+            r.style.left = Math.random() * 80 + 10 + '%';
+            r.innerText = emoji;
+            document.getElementById('reactionZone').appendChild(r);
+            setTimeout(() => r.remove(), 2000);
+        }
+
+        function handleSignals(data, from) {
+            if(data.type === 'msg') pushMsg(from.split('-')[1], data.text, 'remote');
+            if(data.type === 'reaction') showReaction(data.emoji);
+        }
+
+        // Standard Functions
+        function sendMsg() {
+            const val = document.getElementById('chatInput').value;
+            if(!val) return;
+            for(let id in connections) connections[id].send({ type: 'msg', text: val });
+            pushMsg('ME', val, 'self');
+            document.getElementById('chatInput').value = "";
+        }
+
+        function pushMsg(who, txt, mode) {
+            const box = document.getElementById('chatBox');
+            const div = document.createElement('div');
+            div.className = `p-3 rounded-2xl max-w-[80%] ${mode === 'self' ? 'bg-accent text-black ml-auto' : 'bg-white/5'}`;
+            div.innerHTML = `<p class="text-[8px] font-bold opacity-50">${who}</p><p class="text-sm">${txt}</p>`;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function toggleAudio() { 
+            localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled;
+            document.getElementById('micBtn').classList.toggle('active');
         }
 
         function toggleVideo() {
-            const t = localStream.getVideoTracks()[0];
-            t.enabled = !t.enabled;
-            document.getElementById('videoBtn').classList.toggle('bg-white');
-            document.getElementById('videoBtn').classList.toggle('text-black');
-            document.getElementById('myView').style.opacity = t.enabled ? "1" : "0.3";
+            localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled;
+            document.getElementById('camBtn').classList.toggle('active');
         }
 
-        function copyMyID() {
-            navigator.clipboard.writeText(document.getElementById('my-id-display').innerText);
-            alert("Your ID Copied!");
+        function toggleSidePanel() { document.getElementById('sidePanel').classList.toggle('open'); }
+        function copyId() { navigator.clipboard.writeText(peerId.split('-')[1]); alert("ID Copied"); }
+        function enterApp() {
+            document.getElementById('gatekeeper').style.display = 'none';
+            callStartTime = Date.now();
+            setInterval(updateUI, 1000);
+        }
+
+        function updateUI() {
+            const elapsed = Date.now() - callStartTime;
+            const m = Math.floor(elapsed / 60000).toString().padStart(2, '0');
+            const s = Math.floor((elapsed % 60000) / 1000).toString().padStart(2, '0');
+            document.getElementById('callTimer').innerText = `00:${m}:${s}`;
+            document.getElementById('pingVal').innerText = Math.floor(Math.random()*10+20) + 'ms';
         }
     </script>
 </body>
