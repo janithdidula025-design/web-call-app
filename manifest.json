@@ -1,13 +1,13 @@
 {
-  "name": "chatapp pro",
-  "short_name": "chatapp",
-  "start_url": "index.html",
+  "name": "ChatApp Secure",
+  "short_name": "ChatApp",
+  "start_url": ".",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0284c7",
+  "background_color": "#0b141a",
+  "theme_color": "#00a884",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/3616/3616215.png",
+      "src": "https://cdn-icons-png.flaticon.com/512/5968/5968841.png",
       "sizes": "512x512",
       "type": "image/png"
     }
