@@ -3,103 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NexCall Ultimate v5.1 | Pro Mesh</title>
+    <title>NexCall Pro </title>
     
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#00ffa3">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/561/561127.png">
-
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <style>
-        :root { --accent: #00ffa3; --danger: #ff3b30; --glass: rgba(255, 255, 255, 0.03); }
-        body { background: radial-gradient(circle at center, #0d1926 0%, #020609 100%); color: white; font-family: 'Inter', sans-serif; height: 100dvh; overflow: hidden; }
-        .glass-panel { background: rgba(13, 25, 38, 0.8); backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.08); }
-        #videoGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; padding: 10px; transition: 0.5s; }
-        .video-wrapper { position: relative; border-radius: 20px; overflow: hidden; background: #000; border: 2px solid transparent; aspect-ratio: 9/16; transition: 0.3s; }
-        .is-speaking { border-color: var(--accent); transform: scale(1.02); box-shadow: 0 0 20px rgba(0,255,163,0.2); }
-        .action-btn { width: 50px; height: 50px; border-radius: 15px; display: flex; align-items: center; justify-content: center; transition: 0.3s; background: var(--glass); }
-        .action-btn.active { background: var(--accent); color: #000; }
-        #sidePanel { position: fixed; right: -100%; top: 0; width: 100%; max-width: 380px; height: 100%; transition: 0.4s ease-in-out; z-index: 300; }
+        :root { 
+            --wa-bg: #0b141a; --wa-panel: #202c33; --wa-green: #00a884;
+            --wa-bubble-me: #005c4b; --wa-bubble-them: #202c33;
+        }
+        body { background: var(--wa-bg); color: #e9edef; font-family: 'Segoe UI', sans-serif; height: 100dvh; overflow: hidden; }
+        
+        /* Video Layout */
+        #videoGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 4px; height: 100%; background: #000; }
+        .video-wrapper { position: relative; width: 100%; height: 100%; transition: 0.3s; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        
+        /* Indicators */
+        .user-tag { position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 4px; font-size: 10px; display: flex; align-items: center; gap: 4px; }
+        .mute-icon { color: #ff3b30; display: none; }
+        .is-muted .mute-icon { display: block; }
+        .is-speaking { box-shadow: inset 0 0 0 4px var(--wa-green); }
+
+        /* Controls */
+        .bottom-nav { background: linear-gradient(transparent, rgba(0,0,0,0.8)); }
+        .wa-btn { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: 0.2s; background: #3b4a54; border: none; }
+        .wa-btn.active { background: #fff; color: #0b141a; }
+        .wa-btn.danger { background: #ea0038; transform: rotate(135deg); }
+        
+        /* Chat Sidebar */
+        #sidePanel { position: fixed; right: -100%; top: 0; width: 100%; max-width: 400px; height: 100%; background: var(--wa-bg); transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1000; display: flex; flex-direction: column; }
         #sidePanel.open { right: 0; }
-        .reaction-float { position: absolute; bottom: 20px; font-size: 2rem; animation: floatUp 2s forwards; pointer-events: none; }
-        @keyframes floatUp { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-100px); } }
+        .chat-msg { padding: 8px 12px; border-radius: 8px; margin: 4px 0; max-width: 80%; font-size: 0.9rem; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+        .me { align-self: flex-end; background: var(--wa-bubble-me); border-top-right-radius: 0; }
+        .them { align-self: flex-start; background: var(--wa-bubble-them); border-top-left-radius: 0; }
     </style>
 </head>
 
 <body class="flex flex-col">
 
-    <header class="p-4 flex justify-between items-center z-50">
+    <header class="bg-[#202c33] p-3 flex justify-between items-center shadow-lg z-50">
         <div class="flex items-center gap-3">
-            <span class="status-pill bg-accent/10 text-accent border border-accent/20 px-3 py-1 rounded-full text-[9px] font-bold">NODE ACTIVE</span>
-            <span id="callTimer" class="text-[10px] font-mono opacity-60 tracking-widest">00:00:00</span>
+            <i class="fas fa-lock text-[#8696a0] text-xs"></i>
+            <div>
+                <h1 class="text-sm font-semibold">NexCall Encrypted</h1>
+                <p id="callStatus" class="text-[10px] text-[#00a884] font-bold uppercase tracking-wider">End-to-End Secure</p>
+            </div>
         </div>
-        <div class="flex items-center gap-4">
-            <div class="text-accent text-xs font-mono" id="pingVal">--ms</div>
-            <button onclick="toggleSidePanel()" class="action-btn !w-10 !h-10"><i class="fas fa-comment-alt"></i></button>
+        <div class="flex items-center gap-5 text-[#aebac1]">
+            <span id="timer" class="text-sm font-mono">00:00</span>
+            <button onclick="toggleSidePanel()" class="relative">
+                <i class="fas fa-comment-dots text-xl"></i>
+                <span id="msgDot" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-[#202c33] hidden"></span>
+            </button>
+            <button onclick="toggleSettings()"><i class="fas fa-ellipsis-v text-xl"></i></button>
         </div>
     </header>
 
-    <main class="flex-1 overflow-hidden relative">
-        <div id="videoGrid" class="h-full w-full"></div>
+    <main class="flex-1 relative bg-black overflow-hidden">
+        <div id="videoGrid"></div>
         
-        <div id="myView" class="fixed bottom-28 right-4 w-32 aspect-[3/4] rounded-2xl border-2 border-accent overflow-hidden z-[100] shadow-2xl">
-            <video id="localVideo" class="h-full w-full object-cover scale-x-[-1]" autoplay muted playsinline></video>
-            <div class="absolute bottom-2 left-2 bg-black/60 px-2 py-0.5 rounded text-[8px] font-bold">YOU</div>
+        <div id="localContainer" class="absolute bottom-32 right-4 w-24 h-36 rounded-xl border border-white/20 overflow-hidden shadow-2xl z-40 bg-[#111b21]">
+            <video id="localVideo" autoplay muted playsinline class="scale-x-[-1]"></video>
+            <div class="absolute bottom-1 left-1 text-[8px] bg-black/40 px-1 rounded">You</div>
         </div>
     </main>
 
-    <div id="reactionZone" class="fixed inset-0 pointer-events-none z-[150]"></div>
-
-    <nav class="p-6 pb-10 flex flex-col items-center gap-4 z-[200]">
-        <div class="flex gap-4 mb-2">
-            <button onclick="sendReaction('❤️')" class="text-xl hover:scale-125 transition">❤️</button>
-            <button onclick="sendReaction('🔥')" class="text-xl hover:scale-125 transition">🔥</button>
-            <button onclick="sendReaction('😂')" class="text-xl hover:scale-125 transition">😂</button>
-            <button onclick="sendReaction('👍')" class="text-xl hover:scale-125 transition">👍</button>
-        </div>
-
-        <div class="glass-panel px-6 py-3 rounded-[30px] flex gap-3 items-center shadow-2xl">
-            <button onclick="toggleAudio()" id="micBtn" class="action-btn active"><i class="fas fa-microphone"></i></button>
-            <button onclick="toggleVideo()" id="camBtn" class="action-btn active"><i class="fas fa-video"></i></button>
-            <button onclick="toggleScreenShare()" id="screenBtn" class="action-btn"><i class="fas fa-desktop"></i></button>
-            <button onclick="applyNextFilter()" class="action-btn"><i class="fas fa-magic"></i></button>
-            <div class="w-px h-8 bg-white/10 mx-1"></div>
-            <button onclick="location.reload()" class="action-btn !bg-red-500 text-white"><i class="fas fa-phone-slash"></i></button>
+    <nav class="fixed bottom-0 left-0 w-full p-6 pb-10 bottom-nav flex flex-col items-center gap-4 z-50">
+        <div class="flex items-center gap-4 bg-[#202c33]/90 backdrop-blur-md p-3 px-6 rounded-full shadow-2xl border border-white/5">
+            <button onclick="toggleAudio()" id="micBtn" class="wa-btn active"><i class="fas fa-microphone"></i></button>
+            <button onclick="toggleVideo()" id="camBtn" class="wa-btn active"><i class="fas fa-video"></i></button>
+            <button onclick="flipCamera()" class="wa-btn"><i class="fas fa-camera-rotate"></i></button>
+            <button onclick="toggleScreenShare()" id="screenBtn" class="wa-btn"><i class="fas fa-share-from-square"></i></button>
+            <button onclick="endCall()" class="wa-btn danger"><i class="fas fa-phone"></i></button>
         </div>
     </nav>
 
-    <div id="sidePanel" class="glass-panel flex flex-col">
-        <div class="p-6 border-b border-white/5 flex justify-between items-center">
-            <h2 class="font-black uppercase text-sm tracking-widest">Encrypted Chat</h2>
-            <button onclick="toggleSidePanel()"><i class="fas fa-times"></i></button>
+    <div id="sidePanel">
+        <div class="p-4 bg-[#202c33] flex items-center gap-4">
+            <button onclick="toggleSidePanel()"><i class="fas fa-arrow-left"></i></button>
+            <span class="font-medium">Call Messages</span>
         </div>
-        <div id="chatBox" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
-        <div class="p-4">
-            <div class="flex gap-2 bg-white/5 p-2 rounded-2xl">
-                <input type="text" id="chatInput" placeholder="Message..." class="bg-transparent flex-1 p-2 outline-none text-sm">
-                <button onclick="sendMsg()" class="w-10 h-10 bg-accent text-black rounded-xl"><i class="fas fa-paper-plane"></i></button>
-            </div>
+        <div id="chatBox" class="flex-1 overflow-y-auto p-4 flex flex-col bg-[url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')] bg-repeat bg-contain"></div>
+        <div class="p-2 bg-[#202c33] flex items-center gap-2">
+            <button onclick="document.getElementById('fileInput').click()" class="text-[#8696a0] px-2"><i class="fas fa-plus text-xl"></i></button>
+            <input type="file" id="fileInput" class="hidden" onchange="sendFile(this)">
+            <input type="text" id="chatInput" placeholder="Message" class="bg-[#2a3942] flex-1 p-2 rounded-lg outline-none text-sm">
+            <button onclick="sendMsg()" class="w-10 h-10 bg-[#00a884] rounded-full text-white flex items-center justify-center"><i class="fas fa-paper-plane"></i></button>
         </div>
     </div>
 
-    <div id="gatekeeper" class="fixed inset-0 bg-[#020609] z-[1000] flex items-center justify-center p-8">
-        <div class="w-full max-w-sm text-center">
+    <div id="gatekeeper" class="fixed inset-0 bg-[#0b141a] z-[2000] flex items-center justify-center p-6 text-center">
+        <div class="max-w-xs w-full">
             <div class="mb-8">
-                <i class="fas fa-shield-alt text-6xl text-accent mb-4"></i>
-                <h1 class="text-3xl font-black italic">NEXCALL <span class="text-accent">V5.1</span></h1>
+                <div class="w-20 h-20 bg-[#25d366] rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl">
+                    <i class="fas fa-video text-4xl text-white"></i>
+                </div>
+                <h1 class="text-2xl font-bold">NexCall Pro</h1>
+                <p class="text-[#8696a0] text-sm">Secure Peer-to-Peer Mesh</p>
             </div>
-            <div class="bg-white/5 p-6 rounded-[35px] border border-white/10">
-                <input type="number" id="targetId" placeholder="REMOTE NODE ID" class="w-full bg-black/40 p-4 rounded-xl text-center text-xl font-mono mb-4 outline-none border border-white/5">
-                <button onclick="startSession()" class="w-full bg-accent text-black py-4 rounded-xl font-black">CONNECT MESH</button>
-            </div>
-            <div class="mt-6 p-4 opacity-50 cursor-pointer" onclick="copyId()">
-                <p class="text-[10px] uppercase mb-1">Your Identity</p>
-                <p id="myIdDisplay" class="font-mono text-lg">--- ---</p>
+            
+            <input type="number" id="targetId" placeholder="Target Node ID" class="w-full bg-[#202c33] p-4 rounded-xl text-center text-xl mb-4 outline-none border border-white/5 focus:border-[#00a884]">
+            <button onclick="startSession()" class="w-full bg-[#00a884] text-[#0b141a] py-4 rounded-xl font-bold mb-6">START CALL</button>
+            
+            <div class="text-[#8696a0] text-xs uppercase tracking-widest mb-2">My Address</div>
+            <div onclick="copyId()" class="bg-[#111b21] p-3 rounded-lg border border-white/5 cursor-pointer hover:bg-black transition">
+                <span id="myIdDisplay" class="text-[#00a884] font-mono text-lg tracking-widest">Generating...</span>
             </div>
         </div>
     </div>
@@ -107,23 +118,26 @@
     <script>
         const peerId = 'NX-' + (localStorage.getItem('nx_id') || Math.floor(100000 + Math.random() * 900000));
         localStorage.setItem('nx_id', peerId.split('-')[1]);
-        const peer = new Peer(peerId);
+        const peer = new Peer(peerId, { debug: 2 });
         
-        let localStream, screenStream, connections = {}, callStartTime;
-        let filters = ['', 'filter-sepia', 'filter-mono'], currentFilter = 0;
+        let localStream, connections = {}, callStartTime, isFrontCam = true;
 
+        // Initialize Media
         async function init() {
             try {
-                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                localStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "user" }, 
+                    audio: true 
+                });
                 document.getElementById('localVideo').srcObject = localStream;
-                setupAudioAnalysis(localStream, 'localVideo');
-            } catch (e) { alert("Permission Denied"); }
+            } catch (e) { alert("Enable Camera and Mic to use NexCall."); }
         }
         init();
 
-        peer.on('open', id => document.getElementById('myIdDisplay').innerText = id);
+        peer.on('open', id => document.getElementById('myIdDisplay').innerText = id.split('-')[1]);
+        
         peer.on('call', call => {
-            if(confirm("Accept incoming mesh link?")) {
+            if(confirm(`Incoming Call from ${call.peer.split('-')[1]}. Accept?`)) {
                 call.answer(localStream);
                 handleCall(call);
                 enterApp();
@@ -132,7 +146,7 @@
 
         peer.on('connection', conn => {
             connections[conn.peer] = conn;
-            conn.on('data', data => handleSignals(data, conn.peer));
+            conn.on('data', data => handleData(data, conn.peer));
         });
 
         function startSession() {
@@ -142,7 +156,7 @@
             handleCall(peer.call(fullId, localStream));
             const conn = peer.connect(fullId);
             connections[fullId] = conn;
-            conn.on('open', () => enterApp());
+            conn.on('open', enterApp);
         }
 
         function handleCall(call) {
@@ -153,106 +167,28 @@
                 const wrapper = document.createElement('div');
                 wrapper.id = id;
                 wrapper.className = 'video-wrapper';
+                wrapper.ondblclick = () => wrapper.requestFullscreen();
+                
                 const v = document.createElement('video');
                 v.srcObject = stream; v.autoplay = true; v.playsInline = true;
-                v.className = "w-full h-full object-cover";
+                
+                const tag = document.createElement('div');
+                tag.className = 'user-tag';
+                tag.innerHTML = `<span>ID: ${call.peer.split('-')[1]}</span><i class="fas fa-microphone-slash mute-icon"></i>`;
+                
                 wrapper.appendChild(v);
+                wrapper.appendChild(tag);
                 document.getElementById('videoGrid').appendChild(wrapper);
-                setupAudioAnalysis(stream, id);
+                setupVoiceDetection(stream, id);
             });
             call.on('close', () => document.getElementById('node-'+call.peer)?.remove());
         }
 
-        // --- NEW: Audio Visualizer & Speaker Detection ---
-        function setupAudioAnalysis(stream, elementId) {
-            const audioContext = new AudioContext();
-            const source = audioContext.createMediaStreamSource(stream);
-            const analyzer = audioContext.createAnalyser();
-            source.connect(analyzer);
-            analyzer.fftSize = 512;
-            const bufferLength = analyzer.frequencyBinCount;
-            const dataArray = new Uint8Array(bufferLength);
-
-            function checkVolume() {
-                analyzer.getByteFrequencyData(dataArray);
-                let sum = 0;
-                for(let i=0; i<bufferLength; i++) sum += dataArray[i];
-                let average = sum / bufferLength;
-                
-                const el = document.getElementById(elementId === 'localVideo' ? 'myView' : elementId);
-                if(average > 30) el?.classList.add('is-speaking');
-                else el?.classList.remove('is-speaking');
-                
-                requestAnimationFrame(checkVolume);
-            }
-            checkVolume();
-        }
-
-        // --- NEW: Screen Sharing ---
-        async function toggleScreenShare() {
-            try {
-                if(!screenStream) {
-                    screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-                    document.getElementById('screenBtn').classList.add('active');
-                    // Replace video tracks for all callers
-                    for(let id in peer.connections) {
-                        const sender = peer.connections[id][0].peerConnection.getSenders().find(s => s.track.kind === 'video');
-                        sender.replaceTrack(screenStream.getVideoTracks()[0]);
-                    }
-                    screenStream.getVideoTracks()[0].onended = () => toggleScreenShare();
-                } else {
-                    screenStream.getTracks().forEach(t => t.stop());
-                    screenStream = null;
-                    document.getElementById('screenBtn').classList.remove('active');
-                    for(let id in peer.connections) {
-                        const sender = peer.connections[id][0].peerConnection.getSenders().find(s => s.track.kind === 'video');
-                        sender.replaceTrack(localStream.getVideoTracks()[0]);
-                    }
-                }
-            } catch (e) { console.error(e); }
-        }
-
-        // --- NEW: Reactions ---
-        function sendReaction(emoji) {
-            for(let id in connections) connections[id].send({ type: 'reaction', emoji });
-            showReaction(emoji);
-        }
-
-        function showReaction(emoji) {
-            const r = document.createElement('div');
-            r.className = 'reaction-float';
-            r.style.left = Math.random() * 80 + 10 + '%';
-            r.innerText = emoji;
-            document.getElementById('reactionZone').appendChild(r);
-            setTimeout(() => r.remove(), 2000);
-        }
-
-        function handleSignals(data, from) {
-            if(data.type === 'msg') pushMsg(from.split('-')[1], data.text, 'remote');
-            if(data.type === 'reaction') showReaction(data.emoji);
-        }
-
-        // Standard Functions
-        function sendMsg() {
-            const val = document.getElementById('chatInput').value;
-            if(!val) return;
-            for(let id in connections) connections[id].send({ type: 'msg', text: val });
-            pushMsg('ME', val, 'self');
-            document.getElementById('chatInput').value = "";
-        }
-
-        function pushMsg(who, txt, mode) {
-            const box = document.getElementById('chatBox');
-            const div = document.createElement('div');
-            div.className = `p-3 rounded-2xl max-w-[80%] ${mode === 'self' ? 'bg-accent text-black ml-auto' : 'bg-white/5'}`;
-            div.innerHTML = `<p class="text-[8px] font-bold opacity-50">${who}</p><p class="text-sm">${txt}</p>`;
-            box.appendChild(div);
-            box.scrollTop = box.scrollHeight;
-        }
-
-        function toggleAudio() { 
-            localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled;
+        // WhatsApp Features
+        function toggleAudio() {
+            const enabled = localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled;
             document.getElementById('micBtn').classList.toggle('active');
+            broadcast({ type: 'mute-status', muted: !enabled });
         }
 
         function toggleVideo() {
@@ -260,20 +196,94 @@
             document.getElementById('camBtn').classList.toggle('active');
         }
 
-        function toggleSidePanel() { document.getElementById('sidePanel').classList.toggle('open'); }
-        function copyId() { navigator.clipboard.writeText(peerId.split('-')[1]); alert("ID Copied"); }
+        async function flipCamera() {
+            isFrontCam = !isFrontCam;
+            const newStream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: isFrontCam ? "user" : "environment" }
+            });
+            const videoTrack = newStream.getVideoTracks()[0];
+            for(let id in peer.connections) {
+                const sender = peer.connections[id][0].peerConnection.getSenders().find(s => s.track.kind === 'video');
+                sender.replaceTrack(videoTrack);
+            }
+            localStream.removeTrack(localStream.getVideoTracks()[0]);
+            localStream.addTrack(videoTrack);
+            document.getElementById('localVideo').srcObject = localStream;
+            document.getElementById('localVideo').classList.toggle('scale-x-[-1]', isFrontCam);
+        }
+
+        function sendMsg() {
+            const txt = document.getElementById('chatInput').value;
+            if(!txt) return;
+            broadcast({ type: 'chat', text: txt });
+            pushMsg('Me', txt, 'me');
+            document.getElementById('chatInput').value = '';
+        }
+
+        function pushMsg(who, txt, type) {
+            const box = document.getElementById('chatBox');
+            const div = document.createElement('div');
+            div.className = `chat-msg ${type}`;
+            div.innerHTML = `<p class="text-[10px] font-bold opacity-60">${who}</p><p>${txt}</p>`;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+            if(type === 'them' && !document.getElementById('sidePanel').classList.contains('open')) {
+                document.getElementById('msgDot').classList.remove('hidden');
+            }
+        }
+
+        function handleData(data, from) {
+            const sid = from.split('-')[1];
+            if(data.type === 'chat') pushMsg(sid, data.text, 'them');
+            if(data.type === 'mute-status') {
+                const el = document.getElementById('node-'+from);
+                data.muted ? el?.classList.add('is-muted') : el?.classList.remove('is-muted');
+            }
+        }
+
+        function broadcast(data) {
+            for(let id in connections) connections[id].send(data);
+        }
+
+        function setupVoiceDetection(stream, elId) {
+            const ctx = new AudioContext();
+            const src = ctx.createMediaStreamSource(stream);
+            const analyzer = ctx.createAnalyser();
+            src.connect(analyzer);
+            const data = new Uint8Array(analyzer.frequencyBinCount);
+            function detect() {
+                analyzer.getByteFrequencyData(data);
+                const vol = data.reduce((a, b) => a + b) / data.length;
+                const el = document.getElementById(elId);
+                vol > 30 ? el?.classList.add('is-speaking') : el?.classList.remove('is-speaking');
+                requestAnimationFrame(detect);
+            }
+            detect();
+        }
+
         function enterApp() {
             document.getElementById('gatekeeper').style.display = 'none';
             callStartTime = Date.now();
-            setInterval(updateUI, 1000);
+            setInterval(() => {
+                const diff = Math.floor((Date.now() - callStartTime) / 1000);
+                const m = Math.floor(diff/60).toString().padStart(2,'0');
+                const s = (diff%60).toString().padStart(2,'0');
+                document.getElementById('timer').innerText = `${m}:${s}`;
+            }, 1000);
         }
 
-        function updateUI() {
-            const elapsed = Date.now() - callStartTime;
-            const m = Math.floor(elapsed / 60000).toString().padStart(2, '0');
-            const s = Math.floor((elapsed % 60000) / 1000).toString().padStart(2, '0');
-            document.getElementById('callTimer').innerText = `00:${m}:${s}`;
-            document.getElementById('pingVal').innerText = Math.floor(Math.random()*10+20) + 'ms';
+        function toggleSidePanel() {
+            document.getElementById('sidePanel').classList.toggle('open');
+            document.getElementById('msgDot').classList.add('hidden');
+        }
+
+        function copyId() {
+            navigator.clipboard.writeText(peerId.split('-')[1]);
+            alert("ID Copied!");
+        }
+
+        function endCall() {
+            if(confirm("End call?")) location.reload();
         }
     </script>
 </body>
