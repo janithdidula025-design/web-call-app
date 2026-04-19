@@ -7,6 +7,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <div id="installBanner" class="hidden p-4 bg-[#202c33] border-b border-[#00a884] flex justify-between items-center">
+    <div class="text-sm">Install ChatApp for a better experience!</div>
+    <button onclick="triggerInstall()" class="bg-[#00a884] text-black px-4 py-2 rounded-lg font-bold text-xs">INSTALL</button>
+</div>
     
     <style>
         :root {
@@ -303,6 +308,46 @@
         document.getElementById('msgInput').addEventListener('keypress', (e) => {
             if(e.key === 'Enter') sendMessage();
         });
+        let deferredPrompt;
+const installBanner = document.getElementById('installBanner');
+
+// 1. Install කරන්න පුළුවන් අවස්ථාවකදී බටන් එක පෙන්වීම
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    // ඇප් එක දැනටමත් ඉන්ස්ටෝල් කරලා නැත්නම් විතරක් පෙන්වන්න
+    installBanner.classList.remove('hidden');
+});
+
+// 2. Install Button එක click කළ විට සිදුවන දේ
+window.triggerInstall = async () => {
+    if (!deferredPrompt) return;
+    
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    
+    if (outcome === 'accepted') {
+        console.log('User accepted the install prompt');
+    }
+    deferredPrompt = null;
+    installBanner.classList.add('hidden'); // බටන් එක අයින් කරනවා
+};
+
+// 3. ඇප් එක ඉන්ස්ටෝල් වී අවසන් නම් බටන් එක සදහටම අයින් කරන්න
+window.addEventListener('appinstalled', () => {
+    installBanner.classList.add('hidden');
+    deferredPrompt = null;
+    console.log('PWA was installed');
+});
+
+// 4. Service Worker Register කිරීම (PWA එකක් වීමට අනිවාර්යයි)
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').then(reg => {
+            console.log('Service Worker registered!');
+        }).catch(err => console.log('SW registration failed:', err));
+    });
+}
     </script>
 </body>
 </html>
