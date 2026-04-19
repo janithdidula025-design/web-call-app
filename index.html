@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ChatApp Pro | Secure Messenger & Calls</title>
+    <title>ChatApp | Secure P2P Messenger</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -15,56 +15,64 @@
             --panel-bg: #202c33;
             --bubble-me: #005c4b;
             --bubble-them: #202c33;
+            --text-primary: #e9edef;
+            --text-secondary: #8696a0;
         }
-        body { background-color: var(--main-bg); color: #e9edef; font-family: 'Segoe UI', sans-serif; height: 100dvh; overflow: hidden; }
+
+        body { 
+            background-color: var(--main-bg); 
+            color: var(--text-primary); 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            height: 100dvh; 
+            overflow: hidden; 
+        }
         
         .chat-wallpaper {
             background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
             background-blend-mode: overlay; 
-            background-color: rgba(11, 20, 26, 0.95);
+            background-color: rgba(11, 20, 26, 0.96);
         }
 
-        .bubble { position: relative; padding: 10px 14px; border-radius: 12px; max-width: 80%; font-size: 0.95rem; box-shadow: 0 1px 1px rgba(0,0,0,0.2); line-height: 1.4; animation: slideIn 0.2s ease-out; }
+        .bubble { 
+            position: relative; 
+            padding: 8px 12px; 
+            border-radius: 10px; 
+            max-width: 85%; 
+            font-size: 0.95rem; 
+            box-shadow: 0 1px 1px rgba(0,0,0,0.2); 
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
         .bubble-me { background: var(--bubble-me); align-self: flex-end; border-top-right-radius: 0; }
         .bubble-them { background: var(--bubble-them); align-self: flex-start; border-top-left-radius: 0; }
         
-        @keyframes slideIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* Video Call UI */
-        #videoOverlay { position: fixed; inset: 0; background: black; z-index: 6000; display: none; flex-direction: column; }
-        #remoteVideo { width: 100%; height: 100%; object-fit: cover; }
-        #localVideo { width: 100px; height: 140px; position: absolute; top: 20px; right: 20px; border-radius: 12px; border: 2px solid white; object-fit: cover; z-index: 6001; }
-        .call-controls { position: absolute; bottom: 50px; left: 0; right: 0; display: flex; justify-content: center; gap: 30px; z-index: 6002; }
-
         .tab-active { border-bottom: 3px solid var(--brand-green); color: var(--brand-green); }
+
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .msg-animate { animation: slideIn 0.15s ease-out forwards; }
     </style>
 </head>
 <body class="flex flex-col">
-
-    <div id="videoOverlay">
-        <video id="localVideo" autoplay muted playsinline></video>
-        <video id="remoteVideo" autoplay playsinline></video>
-        <div class="call-controls">
-            <button onclick="endCall()" class="w-16 h-16 bg-red-600 rounded-full text-white text-2xl shadow-2xl hover:scale-110 transition active:scale-90">
-                <i class="fas fa-phone-slash"></i>
-            </button>
-        </div>
-    </div>
 
     <div id="authScreen" class="fixed inset-0 z-[5000] bg-[#0b141a] flex flex-col items-center justify-center p-10">
         <div class="text-center mb-10">
             <div class="w-20 h-20 bg-[#00a884] rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-2xl rotate-3">
                 <i class="fas fa-comment-alt text-4xl text-white"></i>
             </div>
-            <h1 class="text-3xl font-extrabold tracking-tight">ChatApp Pro</h1>
-            <p class="text-xs text-[#8696a0] mt-2">Secure P2P Communication</p>
+            <h1 class="text-3xl font-extrabold tracking-tight">ChatApp</h1>
+            <p class="text-xs text-[#8696a0] mt-2 font-mono uppercase tracking-widest">End-to-End P2P</p>
         </div>
         <div class="w-full max-w-sm space-y-4">
-            <input type="text" id="userName" placeholder="Your Name" class="w-full bg-[#2a3942] p-4 rounded-xl outline-none focus:ring-2 ring-[#00a884]">
-            <input type="number" id="userPhone" placeholder="Mobile Number" class="w-full bg-[#2a3942] p-4 rounded-xl outline-none focus:ring-2 ring-[#00a884]">
-            <button onclick="registerUser()" class="w-full bg-[#00a884] text-[#0b141a] py-4 rounded-xl font-bold uppercase tracking-widest">Enter Chat</button>
+            <input type="text" id="userName" placeholder="Your Name" class="w-full bg-[#2a3942] p-4 rounded-xl outline-none border border-white/5 focus:ring-2 ring-[#00a884]">
+            <input type="number" id="userPhone" placeholder="Mobile Number" class="w-full bg-[#2a3942] p-4 rounded-xl outline-none border border-white/5 focus:ring-2 ring-[#00a884]">
+            <button onclick="registerUser()" class="w-full bg-[#00a884] text-[#0b141a] py-4 rounded-xl font-bold uppercase tracking-widest hover:opacity-90 active:scale-95 transition">Enter Chat</button>
         </div>
     </div>
 
@@ -72,72 +80,73 @@
         <header class="bg-[#202c33] px-5 py-4 flex justify-between items-center shadow-lg">
             <h1 class="text-2xl font-bold text-[#e9edef]">ChatApp</h1>
             <div class="flex gap-6 text-[#8696a0] text-lg">
+                <i class="fas fa-camera cursor-pointer"></i>
                 <i class="fas fa-search cursor-pointer"></i>
                 <i class="fas fa-ellipsis-v cursor-pointer"></i>
             </div>
         </header>
 
         <div class="flex bg-[#202c33] text-sm font-bold text-[#8696a0] uppercase tracking-wider border-b border-white/5">
-            <div class="flex-1 py-4 text-center tab-active">Chats</div>
-            <div class="flex-1 py-4 text-center">Status</div>
-            <div class="flex-1 py-4 text-center">Calls</div>
+            <div class="flex-1 py-3 text-center tab-active">Chats</div>
+            <div class="flex-1 py-3 text-center">Status</div>
+            <div class="flex-1 py-3 text-center">Calls</div>
         </div>
 
         <div class="p-4 bg-[#111b21] flex gap-2">
             <input type="number" id="targetPhone" placeholder="Friend's Mobile Number" class="flex-1 bg-[#2a3942] p-3 rounded-xl text-sm outline-none border border-white/5">
-            <button onclick="startNewChat()" class="bg-[#00a884] px-5 rounded-xl text-black font-bold text-sm shadow-lg active:scale-95 transition">START</button>
+            <button onclick="startNewChat()" class="bg-[#00a884] px-5 rounded-xl text-black font-bold text-xs shadow-lg active:scale-95 transition">CHAT</button>
         </div>
 
-        <div id="chatList" class="flex-1 overflow-y-auto bg-[#111b21]"></div>
+        <div id="chatList" class="flex-1 overflow-y-auto bg-[#111b21]">
+            </div>
     </div>
 
     <div id="chatScreen" class="hidden fixed inset-0 z-[4000] bg-[#0b141a] flex flex-col">
         <header class="bg-[#202c33] p-3 flex items-center gap-3 shadow-md">
             <button onclick="backToHome()" class="p-1"><i class="fas fa-arrow-left text-lg"></i></button>
-            <div id="chatAvatar" class="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-700 rounded-full flex items-center justify-center font-bold text-white">?</div>
-            <div class="flex-1">
-                <h2 id="targetDisplay" class="text-sm font-bold tracking-wide">User</h2>
-                <p id="connectionStatus" class="text-[10px] text-gray-400">waiting...</p>
+            <div id="chatAvatar" class="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center font-bold text-white">?</div>
+            <div class="flex-1 overflow-hidden">
+                <h2 id="targetDisplay" class="text-sm font-bold truncate">User</h2>
+                <p id="connectionStatus" class="text-[10px] text-gray-400">connecting...</p>
             </div>
             <div class="flex gap-6 px-3 text-[#aebac1]">
-                <button onclick="startCall(true)"><i class="fas fa-video cursor-pointer hover:text-white"></i></button>
-                <button onclick="startCall(false)"><i class="fas fa-phone cursor-pointer hover:text-white"></i></button>
+                <i class="fas fa-video cursor-pointer"></i>
+                <i class="fas fa-phone cursor-pointer"></i>
             </div>
         </header>
 
-        <div id="messageBox" class="flex-1 chat-wallpaper overflow-y-auto p-4 flex flex-col gap-3"></div>
-
-        <footer class="p-3 bg-[#202c33] flex items-center gap-3">
-            <div class="flex-1 bg-[#2a3942] rounded-full flex items-center px-4 py-1 gap-3">
-                <label class="cursor-pointer">
-                    <i class="fas fa-paperclip text-[#8696a0] -rotate-45"></i>
-                    <input type="file" id="imageInput" class="hidden" accept="image/*" onchange="sendImage(this)">
-                </label>
-                <input type="text" id="msgInput" placeholder="Type a message..." class="bg-transparent flex-1 py-2 outline-none text-sm text-white">
-                <button id="recordBtn" onmousedown="startRecording()" onmouseup="stopRecording()" class="text-[#8696a0]">
-                    <i class="fas fa-microphone text-xl"></i>
-                </button>
+        <div id="messageBox" class="flex-1 chat-wallpaper overflow-y-auto p-4 flex flex-col gap-2">
             </div>
-            <button onclick="sendRealMessage()" class="w-12 h-12 bg-[#00a884] rounded-full flex items-center justify-center text-[#0b141a] shadow-lg active:scale-90 transition">
-                <i class="fas fa-paper-plane text-xl"></i>
+
+        <footer class="p-2 bg-[#202c33] flex items-center gap-2">
+            <div class="flex-1 bg-[#2a3942] rounded-full flex items-center px-4 py-1 gap-3">
+                <i class="far fa-smile text-[#8696a0] text-xl cursor-pointer"></i>
+                <input type="text" id="msgInput" placeholder="Message" class="bg-transparent flex-1 py-2 outline-none text-sm text-white">
+                <i class="fas fa-paperclip text-[#8696a0] -rotate-45 cursor-pointer"></i>
+            </div>
+            <button onclick="sendMessage()" class="w-11 h-11 bg-[#00a884] rounded-full flex items-center justify-center text-[#0b141a] shadow-lg active:scale-90 transition">
+                <i class="fas fa-paper-plane"></i>
             </button>
         </footer>
     </div>
 
     <script>
-        let peer, conn, currentCall, localStream, mediaRecorder, audioChunks = [];
-        let userData = JSON.parse(localStorage.getItem('chatapp_user'));
-        let activeChats = JSON.parse(localStorage.getItem('chatapp_history')) || [];
-        let currentTargetId = "";
+        let peer, conn;
+        let userData = JSON.parse(localStorage.getItem('chat_user'));
+        let chatHistory = JSON.parse(localStorage.getItem('chat_history')) || {}; // { phone: [msgs] }
+        let activePeers = JSON.parse(localStorage.getItem('chat_peers')) || []; // [{phone, name}]
+        let currentChatPhone = null;
 
+        // Auto-login
         if(userData) initPeer();
 
         function registerUser() {
-            const name = document.getElementById('userName').value;
-            const phone = document.getElementById('userPhone').value;
-            if(!name || phone.length < 9) return alert("Valid name & phone required");
+            const name = document.getElementById('userName').value.trim();
+            const phone = document.getElementById('userPhone').value.trim();
+            if(!name || phone.length < 9) return alert("Valid name and phone required");
+            
             userData = { name, phone };
-            localStorage.setItem('chatapp_user', JSON.stringify(userData));
+            localStorage.setItem('chat_user', JSON.stringify(userData));
             initPeer();
         }
 
@@ -146,166 +155,154 @@
             document.getElementById('homeScreen').classList.remove('hidden');
             
             peer = new Peer("CHATA-" + userData.phone);
-            peer.on('open', renderChatList);
 
-            peer.on('connection', incomingConn => {
-                conn = incomingConn;
-                const senderPhone = conn.peer.replace("CHATA-", "");
-                setupChatListeners();
-                openChatWindow(senderPhone, "User " + senderPhone);
+            peer.on('open', (id) => {
+                console.log("Registered as: " + id);
+                renderChatList();
             });
 
-            peer.on('call', async call => {
-                if(confirm("Incoming call from " + call.peer.replace("CHATA-","") + ". Answer?")) {
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                    localStream = stream;
-                    call.answer(stream);
-                    handleCall(call);
-                }
+            // Listen for incoming connections
+            peer.on('connection', (incomingConn) => {
+                handleIncomingConnection(incomingConn);
             });
         }
 
+        function handleIncomingConnection(incomingConn) {
+            conn = incomingConn;
+            const remotePhone = conn.peer.replace("CHATA-", "");
+            
+            setupConnListeners();
+            addPeerToList(remotePhone, "User " + remotePhone);
+        }
+
         function startNewChat() {
-            const phone = document.getElementById('targetPhone').value;
-            if(!phone || phone === userData.phone) return;
+            const phone = document.getElementById('targetPhone').value.trim();
+            if(!phone || phone === userData.phone) return alert("Enter a valid friend's number");
             openChatWindow(phone, "User " + phone);
         }
 
         function openChatWindow(phone, name) {
-            currentTargetId = "CHATA-" + phone;
+            currentChatPhone = phone;
             document.getElementById('chatScreen').classList.remove('hidden');
             document.getElementById('targetDisplay').innerText = name;
             document.getElementById('chatAvatar').innerText = name[0].toUpperCase();
             
-            conn = peer.connect(currentTargetId);
-            setupChatListeners();
-            addChatToList(phone, name);
+            // Connect to peer
+            conn = peer.connect("CHATA-" + phone);
+            setupConnListeners();
+            
+            addPeerToList(phone, name);
+            renderMessages();
         }
 
-        function setupChatListeners() {
+        function setupConnListeners() {
             conn.on('open', () => {
-                document.getElementById('connectionStatus').innerText = "Online";
-                document.getElementById('connectionStatus').className = "text-[10px] text-[#00a884] font-bold";
+                if (currentChatPhone === conn.peer.replace("CHATA-", "")) {
+                    document.getElementById('connectionStatus').innerText = "online";
+                    document.getElementById('connectionStatus').className = "text-[10px] text-[#00a884] font-bold";
+                }
             });
-            conn.on('data', data => displayMessage(data, 'them'));
+
+            conn.on('data', (data) => {
+                const senderPhone = conn.peer.replace("CHATA-", "");
+                saveMessage(senderPhone, data, 'them');
+                
+                if (currentChatPhone === senderPhone) {
+                    renderMessages();
+                } else {
+                    renderChatList(); // Update preview in background
+                }
+            });
+
+            conn.on('close', () => {
+                document.getElementById('connectionStatus').innerText = "offline";
+                document.getElementById('connectionStatus').className = "text-[10px] text-gray-400";
+            });
         }
 
-        // Messaging Logic
-        function sendRealMessage() {
+        function sendMessage() {
             const input = document.getElementById('msgInput');
-            if(!input.value || !conn) return;
-            const msg = { type: 'text', content: input.value };
-            conn.send(msg);
-            displayMessage(msg, 'me');
+            if(!input.value.trim() || !conn) return;
+
+            const text = input.value;
+            conn.send(text);
+            saveMessage(currentChatPhone, text, 'me');
+            renderMessages();
+            renderChatList();
             input.value = '';
         }
 
-        function sendImage(input) {
-            const file = input.files[0];
-            if(!file || !conn) return;
-            const reader = new FileReader();
-            reader.onload = e => {
-                const msg = { type: 'image', content: e.target.result };
-                conn.send(msg);
-                displayMessage(msg, 'me');
-            };
-            reader.readAsDataURL(file);
+        function saveMessage(phone, text, type) {
+            if(!chatHistory[phone]) chatHistory[phone] = [];
+            chatHistory[phone].push({
+                text: text,
+                type: type,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            });
+            localStorage.setItem('chat_history', JSON.stringify(chatHistory));
         }
 
-        async function startRecording() {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
-            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-            mediaRecorder.onstop = () => {
-                const blob = new Blob(audioChunks, { type: 'audio/ogg' });
-                const reader = new FileReader();
-                reader.onload = e => {
-                    const msg = { type: 'audio', content: e.target.result };
-                    conn.send(msg);
-                    displayMessage(msg, 'me');
-                };
-                reader.readAsDataURL(blob);
-                audioChunks = [];
-            };
-            mediaRecorder.start();
-            document.getElementById('recordBtn').style.color = "red";
-        }
-
-        function stopRecording() {
-            if(mediaRecorder) mediaRecorder.stop();
-            document.getElementById('recordBtn').style.color = "#8696a0";
-        }
-
-        function displayMessage(data, type) {
+        function renderMessages() {
             const box = document.getElementById('messageBox');
-            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const div = document.createElement('div');
-            div.className = `bubble bubble-${type}`;
+            box.innerHTML = "";
+            const msgs = chatHistory[currentChatPhone] || [];
             
-            if(data.type === 'text') div.innerHTML = `${data.content}`;
-            else if(data.type === 'image') div.innerHTML = `<img src="${data.content}" class="rounded-lg max-w-full mb-1">`;
-            else if(data.type === 'audio') div.innerHTML = `<div class="flex items-center gap-2"><i class="fas fa-play"></i><audio controls class="h-8 w-40"><source src="${data.content}"></audio></div>`;
-            
-            div.innerHTML += `<span class="text-[9px] opacity-50 block text-right mt-1">${time}</span>`;
-            box.appendChild(div);
+            msgs.forEach(msg => {
+                const div = document.createElement('div');
+                div.className = `bubble bubble-${msg.type} msg-animate`;
+                div.innerHTML = `
+                    ${msg.text}
+                    <span class="text-[9px] opacity-50 block text-right mt-1">${msg.time}</span>
+                `;
+                box.appendChild(div);
+            });
             box.scrollTop = box.scrollHeight;
         }
 
-        // Call Logic
-        async function startCall(isVideo) {
-            document.getElementById('videoOverlay').style.display = 'flex';
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true });
-                localStream = stream;
-                document.getElementById('localVideo').srcObject = stream;
-                const call = peer.call(currentTargetId, stream);
-                handleCall(call);
-            } catch (err) {
-                alert("Camera/Mic access denied!");
-                endCall();
+        function addPeerToList(phone, name) {
+            if(!activePeers.find(p => p.phone === phone)) {
+                activePeers.unshift({phone, name});
+                localStorage.setItem('chat_peers', JSON.stringify(activePeers));
             }
-        }
-
-        function handleCall(call) {
-            currentCall = call;
-            document.getElementById('videoOverlay').style.display = 'flex';
-            call.on('stream', rs => document.getElementById('remoteVideo').srcObject = rs);
-            call.on('close', endCall);
-        }
-
-        function endCall() {
-            if (currentCall) currentCall.close();
-            if (localStream) localStream.getTracks().forEach(t => t.stop());
-            document.getElementById('videoOverlay').style.display = 'none';
-        }
-
-        // List Logic
-        function addChatToList(phone, name) {
-            if(!activeChats.find(c => c.phone === phone)) {
-                activeChats.unshift({phone, name});
-                localStorage.setItem('chatapp_history', JSON.stringify(activeChats));
-                renderChatList();
-            }
+            renderChatList();
         }
 
         function renderChatList() {
             const list = document.getElementById('chatList');
-            if(activeChats.length === 0) {
-                list.innerHTML = `<div class="p-10 text-center text-gray-500 text-sm">No chats yet.</div>`;
+            if(activePeers.length === 0) {
+                list.innerHTML = `<div class="p-10 text-center text-gray-500 text-sm">No recent chats</div>`;
                 return;
             }
-            list.innerHTML = activeChats.map(c => `
-                <div onclick="openChatWindow('${c.phone}', '${c.name}')" class="flex items-center gap-4 p-4 border-b border-white/5 active:bg-[#202c33] cursor-pointer">
-                    <div class="w-14 h-14 bg-emerald-800 rounded-full flex items-center justify-center font-bold text-lg text-white">${c.name[0].toUpperCase()}</div>
-                    <div class="flex-1">
-                        <div class="flex justify-between items-center"><span class="font-bold">${c.name}</span><span class="text-[10px] text-gray-500">P2P</span></div>
-                        <p class="text-xs text-gray-400 truncate">Tap to chat securely</p>
+
+            list.innerHTML = activePeers.map(p => {
+                const history = chatHistory[p.phone] || [];
+                const lastMsg = history.length > 0 ? history[history.length - 1] : { text: "No messages yet", time: "" };
+                
+                return `
+                    <div onclick="openChatWindow('${p.phone}', '${p.name}')" class="flex items-center gap-4 p-4 border-b border-white/5 active:bg-[#202c33] transition cursor-pointer">
+                        <div class="w-14 h-14 bg-emerald-800 rounded-full flex items-center justify-center font-bold text-lg text-white shadow-lg">${p.name[0].toUpperCase()}</div>
+                        <div class="flex-1 overflow-hidden">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-bold text-[#e9edef]">${p.name}</span>
+                                <span class="text-[10px] text-gray-500">${lastMsg.time}</span>
+                            </div>
+                            <p class="text-xs text-gray-400 truncate">${lastMsg.text}</p>
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
-        function backToHome() { document.getElementById('chatScreen').classList.add('hidden'); }
+        function backToHome() {
+            currentChatPhone = null;
+            document.getElementById('chatScreen').classList.add('hidden');
+            renderChatList();
+        }
+
+        // Enter key to send
+        document.getElementById('msgInput').addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') sendMessage();
+        });
     </script>
 </body>
 </html>
